@@ -1,0 +1,109 @@
+[FlowceptAcademyPlugin] Started
+  workflow_id : 78f56871-f09b-4bd7-9e42-e68970dc35ca
+  campaign_id : 53704e52-4b0f-4aa3-bf55-e1a9d4ed7b05
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+What is the simulated ionization energy of benzene?
+[FlowceptLangGraphPlugin] Stopped.
+
+[FlowceptLangGraphPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+chain_end                    4       9.369    2342.2   1601.7   3428.2
+chain_start                  4       7.150    1787.5   1636.2   1973.2
+chat_model_start             2       3.192    1596.1   1518.8   1673.4
+flush                        1       0.507     507.0    507.0    507.0
+llm_end                      2       5.879    2939.5   2568.4   3310.6
+tool_end                     1       1.625    1625.1   1625.1   1625.1
+tool_start                   1       1.657    1656.9   1656.9   1656.9
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptLangGraphPlugin] Performance stats written to langgraph_provenance_perf_27ea848a-663f-401f-9b14-2c8934c34d8c.csv
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  2       0.402     201.2     94.1    308.3
+flush                        1       0.255     254.6    254.6    254.6
+intercept_task               6       0.182      30.4     16.5     41.4
+lifecycle_emit               4       0.247      61.7     30.1     94.4
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_78f56871-f09b-4bd7-9e42-e68970dc35ca.csv
+result: {'messages': [HumanMessage(content='What is the simulated ionization energy of benzene?', additional_kwargs={}, response_metadata={}, id='4d2f3974-4eb0-4bdc-8651-5411bce31dd5'), AIMessage(content='', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 26, 'prompt_tokens': 60, 'total_tokens': 86, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}, 'latency_checkpoint': {'engine_tbt_ms': 9, 'engine_ttft_ms': 68, 'engine_ttlt_ms': 296, 'pre_inference_ms': 91, 'service_tbt_ms': 9, 'service_ttft_ms': 264, 'service_ttlt_ms': 488, 'total_duration_ms': 405, 'user_visible_ttft_ms': 174}}, 'model_provider': 'openai', 'model_name': 'gpt-4o-2024-11-20', 'system_fingerprint': 'fp_6ef6b02e87', 'id': 'chatcmpl-E9DTMj35b1Tfq4gXkEuwn00d96YVV', 'service_tier': 'default', 'finish_reason': 'tool_calls', 'logprobs': None}, id='lc_run--019fcde0-2c1b-7720-94ce-e252aead644e-0', tool_calls=[{'name': 'compute_ionization_energy', 'args': {'smiles': 'C1=CC=CC=C1'}, 'id': 'call_sJim0YunLN7BaLEfgBFURA7m', 'type': 'tool_call'}], invalid_tool_calls=[], usage_metadata={'input_tokens': 60, 'output_tokens': 26, 'total_tokens': 86, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}}), ToolMessage(content='0.5', name='compute_ionization_energy', id='0659e3f7-6e30-46f8-b96f-134f534dc079', tool_call_id='call_sJim0YunLN7BaLEfgBFURA7m'), AIMessage(content='The simulated ionization energy of benzene is 0.5 eV.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 18, 'prompt_tokens': 99, 'total_tokens': 117, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}, 'latency_checkpoint': {'engine_tbt_ms': 5, 'engine_ttft_ms': 40, 'engine_ttlt_ms': 133, 'pre_inference_ms': 106, 'service_tbt_ms': 5, 'service_ttft_ms': 248, 'service_ttlt_ms': 336, 'total_duration_ms': 238, 'user_visible_ttft_ms': 143}}, 'model_provider': 'openai', 'model_name': 'gpt-4o-2024-11-20', 'system_fingerprint': 'fp_6ef6b02e87', 'id': 'chatcmpl-E9DTNYxKqred9vYvALiTThS72y1GW', 'service_tier': 'default', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019fcde0-2fe6-7621-8691-69683fb77d85-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 99, 'output_tokens': 18, 'total_tokens': 117, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}})]}
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 19
+  workflows : 6
+  tasks     : 13
+  campaigns : 53704e52
+
+  by subtype:
+    academy_lifecycle            4
+    langgraph_node               3
+    llm_call                     2
+    academy_action               2
+    tool_call                    1
+    langgraph_graph              1
+
+  by agent:
+    AgentId<645f7121>            3
+    AgentId<cf587a28>            3
+
+  by status:
+    FINISHED                     13
+============================================================
+campaign 53704e52  workflow: 06-llm
+  └─ agent workflow: LangGraph
+campaign 53704e52  workflow: 06-llm
+  └─ agent workflow: MySimAgent:AgentId<645f7121>
+  └─ agent workflow: Orchestrator:AgentId<cf587a28>
+campaign 53704e52  workflow: 06-llm
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+• Actions (in order)  activity  [agent]  used -> generated
+    answer                 [Orchestrator]  {'args': ['What is the simulated ioniza… -> {'messages': ["HumanMessage(content='Wh…
+    compute_ionization_energy [MySimAgent]  {'args': ['C1=CC=CC=C1'], 'kwargs': {}} -> 0.5
+
+• Cross-agent calls  (caller -> callee.action)
+    AgentId<cf587a28> -> compute_ionization_energy [MySimAgent AgentId<645f7121]
+
+• Cross-framework: LangGraph graph/nodes (Academy action -> LangGraph)
+    graph LangGraph        group=21bc0752 {'inputs': {'messages': [{'… -> {'outputs': {'messages': ["…
+    node  model            group=21bc0752 {'inputs': {'messages': ["H… -> {'outputs': ["Command(updat…
+    node  tools            group=21bc0752 {'inputs': [{'name': 'compu… -> {'outputs': {'messages': ["…
+    node  model            group=21bc0752 {'inputs': {'messages': ["H… -> {'outputs': ["Command(updat…
+    tool  compute_ionization_energy  parent=tools {'input': "{'smiles': '… -> {'output': "ToolMessage…
+
+• LLM calls  (call_type [agent] tokens; parent action; prompt -> response)
+    gpt-4o-2024-11-20 [None]  tokens=86 model=gpt4o  parent=model
+        prompt : None
+        answer : None
+    gpt-4o-2024-11-20 [None]  tokens=117 model=gpt4o  parent=model
+        prompt : None
+        answer : None
+----------------------------------------------------------------
+
+============================================================
+06-llm -- provenance
+============================================================
+
+  records by subtype:
+    academy_lifecycle      │ ████████████████████████████████ 4
+    langgraph_node         │ ████████████████████████         3
+    llm_call               │ ████████████████                 2
+    academy_action         │ ████████████████                 2
+    tool_call              │ ████████                         1
+    langgraph_graph        │ ████████                         1
+
+  LLM tokens by agent:
+    nan                    │ ████████████████████████████████ 203
+============================================================
+provenance card -> ./06-llm_card.md
+
+provenance saved in: runs/06-llm_20260804-124406

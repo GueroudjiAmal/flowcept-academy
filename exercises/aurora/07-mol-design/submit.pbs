@@ -1,0 +1,26 @@
+#!/bin/bash -l
+# PBS submission for exercise 07 (07-mol-design) on Aurora (ALCF).
+# Edit -A <project>, then:  qsub submit.pbs
+#PBS -A <project>
+#PBS -q debug
+#PBS -l select=1:ncpus=208
+#PBS -l walltime=00:20:00
+#PBS -l filesystems=home:flare
+#PBS -N fca-07-mol-design
+#PBS -j oe
+
+set -euo pipefail
+cd "$PBS_O_WORKDIR"
+source ../env.sh                 # one conda env (rdkit+ase+xtb + agents/LLM) + Flowcept settings
+
+# 07 needs a tool-capable LLM (see ../env.sh): set ARGO_USER, or
+# FLOWCEPT_TUTORIAL_MODEL to a tool-capable local model, before submitting.
+
+# If `conda activate` didn't take in this non-interactive job, run via conda:
+if python -c "import xtb" 2>/dev/null; then
+    python solution.py           # (use exercise.py to work through the steps)
+else
+    conda run --no-capture-output -n flowcept-academy python solution.py
+fi
+
+echo "provenance -> $PBS_O_WORKDIR/runs/07-mol-design_<date-time>/  (buffer, perf CSV, 07-mol-design_card.md)"

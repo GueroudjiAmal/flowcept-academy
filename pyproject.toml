@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=64.0", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowcept-academy"
+version = "0.1.0"
+authors = [{ name = "Amal Gueroudji" }]
+description = "1-hour tutorial: capturing the provenance of Academy multi-agent workflows with Flowcept, end-to-end on Aurora (ALCF)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    "academy-py>=0.4.0",
+    # Flowcept core (agentic branch): the Academy plugin, offline JSONL buffer, and
+    # Flowcept.generate_report (the markdown provenance card). Terminal-only: no
+    # matplotlib/PDF deps -- analysis is text + ASCII, so it runs over SSH on Aurora.
+    "flowcept @ git+https://github.com/GueroudjiAmal/flowcept.git@agentic",
+    "pandas",
+    "requests",
+    "pyyaml",
+    "nest_asyncio",
+    "py-cpuinfo",   # flowcept telemetry imports `cpuinfo` but doesn't declare it
+]
+
+[project.optional-dependencies]
+# LLM stack for the stock examples 06/07/08. These construct
+# langchain_openai.ChatOpenAI + LangChain agents/graphs; our routing wrapper
+# (flowcept_academy.langchain_llm) drives OpenAI / Argo / a local CPU model
+# behind that same interface. Install torch from the CPU wheel index:
+#   pip install "flowcept-academy[llm]" --extra-index-url https://download.pytorch.org/whl/cpu
+llm = [
+    "transformers>=4.44", "torch>=2.2", "huggingface_hub",  # local CPU backend
+    "langchain>=1.0", "langchain-core", "langchain-openai",  # LangChain interface (06/07/08)
+    "langgraph",                                             # cross-framework graph (07)
+]
+local-llm = ["flowcept-academy[llm]"]          # back-compat alias
+parsl = ["parsl"]                              # examples 05, 07
+langgraph = ["flowcept-academy[llm]"]          # back-compat alias
+all = ["flowcept-academy[llm,parsl]"]
+# NOTE: the tutorial ships ONE conda env for all 8 exercises
+# (setup/environment.yml, `bash setup/install.sh`) because example 07 needs
+# rdkit + xtb-python for REAL GFN2-xTB chemistry and those are conda-forge only.
+# These pip extras still work if you prefer a manual install, but 07 additionally
+# requires `conda install -c conda-forge rdkit xtb-python ase`.
+
+[tool.setuptools.packages.find]
+include = ["flowcept_academy*"]
+namespaces = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

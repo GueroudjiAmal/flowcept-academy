@@ -1,0 +1,46 @@
+# ONE conda environment for the ENTIRE tutorial (all 8 exercises).
+#
+# Everything runs in this single env -- there is no separate venv and no
+# per-exercise env. Example 07 is the only one that needs real GFN2-xTB chemistry
+# (rdkit + xtb-python, conda-forge only), so the whole tutorial uses conda to keep
+# one setup for everyone; examples 01-06/08 just ignore the chemistry packages.
+#
+# Build (once, on a machine with internet -- e.g. an Aurora login node):
+#   conda env create -f setup/environment.yml
+#   conda run -n flowcept-academy pip install -e .
+# Activate:
+#   conda activate flowcept-academy
+# Verify:
+#   python -c "from flowcept_academy import util; print(util.which_backend())"
+#   python -c "from xtb.ase.calculator import XTB; print('xtb ok')"   # for ex 07
+name: flowcept-academy
+channels:
+  - conda-forge
+dependencies:
+  # Real-chemistry stack for example 07 (conda-forge; not reliably pip-installable)
+  - python=3.12          # wheels available for torch/flowcept; upstream 07 pins 3.14
+  - pip
+  - rdkit
+  - xtb-python
+  - ase
+  - numpy
+  # Everything else via pip: provenance + agents + LangChain/LangGraph + local HF LLM
+  - pip:
+      # CPU-only torch wheels (no CUDA) -- keeps the env small and portable
+      - --extra-index-url https://download.pytorch.org/whl/cpu
+      - academy-py
+      - "flowcept[agents] @ git+https://github.com/GueroudjiAmal/flowcept.git@agentic"
+      - parsl
+      - langgraph
+      - "langchain>=1.0"
+      - langchain-core
+      - langchain-openai
+      - langchain-huggingface
+      - transformers
+      - torch
+      - pandas
+      - requests
+      - pyyaml
+      - nest_asyncio
+      - py-cpuinfo
+      - huggingface_hub

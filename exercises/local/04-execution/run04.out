@@ -1,0 +1,65 @@
+MQ is disabled; starting consumer without a message queue.
+[FlowceptAcademyPlugin] Started
+  workflow_id : 272ec525-d2d7-49b7-a888-72580ab6b962
+  campaign_id : 739425da-61b3-4584-879d-a64fff9b4245
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  1       0.397     397.5    397.5    397.5
+flush                        1       0.502     501.9    501.9    501.9
+intercept_task               3       0.340     113.4     42.2    184.3
+lifecycle_emit               2       0.253     126.3     85.3    167.3
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_272ec525-d2d7-49b7-a888-72580ab6b962.csv
+result: 5 tasks ran across 3 worker processes (pids [139730, 139731, 139732]); main pid 139591
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 6
+  workflows : 3
+  tasks     : 3
+  campaigns : 739425da
+
+  by subtype:
+    academy_lifecycle            2
+    academy_action               1
+
+  by agent:
+    AgentId<98141a41>            3
+
+  by status:
+    FINISHED                     3
+============================================================
+campaign 739425da  workflow: 04-execution
+  └─ agent workflow: Distributor:AgentId<98141a41>
+campaign 739425da  workflow: 04-execution
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+• Actions (in order)  activity  [agent]  used -> generated
+    compute                [Distributor]  {'args': [[2, 3, 4, 5, 6]], 'kwargs': {… -> [{'n': 2, 'sum_sq': 333328333350000, 'p…
+----------------------------------------------------------------
+
+============================================================
+04-execution -- provenance
+============================================================
+
+  records by subtype:
+    academy_lifecycle      │ ████████████████████████████████ 2
+    academy_action         │ ████████████████                 1
+
+  tasks by activity:
+    agent_startup          │ ████████████████████████████████ 1
+    compute                │ ████████████████████████████████ 1
+    agent_shutdown         │ ████████████████████████████████ 1
+============================================================
+provenance card -> ./04-execution_card.md
+
+provenance saved in: runs/04-execution_20260804-122354

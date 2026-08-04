@@ -1,0 +1,72 @@
+[FlowceptAcademyPlugin] Started
+  workflow_id : c3a095f6-0ad2-4eac-b5bb-246a9e89322b
+  campaign_id : 0240c8ce-1ecd-4a08-83d5-93c7defc6f4a
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  1       0.132     131.6    131.6    131.6
+flush                        1       0.387     386.7    386.7    386.7
+intercept_task               5       0.236      47.2     19.1     67.2
+lifecycle_emit               2       0.184      91.8     36.5    147.1
+loop_emit                    2       0.217     108.4     79.7    137.2
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_c3a095f6-0ad2-4eac-b5bb-246a9e89322b.csv
+loop executed 9 time(s)
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 8
+  workflows : 3
+  tasks     : 5
+  campaigns : 0240c8ce
+
+  by subtype:
+    academy_lifecycle            2
+    academy_loop                 2
+    academy_action               1
+
+  by agent:
+    AgentId<ce10f422>            5
+
+  by status:
+    FINISHED                     5
+============================================================
+campaign 0240c8ce  workflow: 02-agent-loop
+  └─ agent workflow: Counter:AgentId<ce10f422>
+campaign 0240c8ce  workflow: 02-agent-loop
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+• Actions (in order)  activity  [agent]  used -> generated
+    get_count              [Counter]  {'args': [], 'kwargs': {}} -> 9
+
+• Loop events (autonomous @loop; grouped by group_id)
+    increment        event=start  group=d5603dee
+    increment        event=exit   group=d5603dee
+----------------------------------------------------------------
+
+============================================================
+02-agent-loop -- provenance
+============================================================
+
+  records by subtype:
+    academy_lifecycle      │ ████████████████████████████████ 2
+    academy_loop           │ ████████████████████████████████ 2
+    academy_action         │ ████████████████                 1
+
+  tasks by activity:
+    increment              │ ████████████████████████████████ 2
+    agent_startup          │ ████████████████                 1
+    get_count              │ ████████████████                 1
+    agent_shutdown         │ ████████████████                 1
+============================================================
+provenance card -> ./02-agent-loop_card.md
+
+provenance saved in: runs/02-agent-loop_20260804-123024

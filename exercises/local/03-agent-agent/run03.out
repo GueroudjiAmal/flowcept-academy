@@ -1,0 +1,76 @@
+[FlowceptAcademyPlugin] Started
+  workflow_id : d5ab586e-91db-44a2-adc2-9e6bebc58877
+  campaign_id : c11b21ea-7681-42d6-be72-32138418c34a
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  3       0.260      86.7     80.9     94.9
+flush                        1       0.484     483.5    483.5    483.5
+intercept_task               9       0.398      44.3     28.5    112.1
+lifecycle_emit               6       0.544      90.7     68.1    148.3
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_d5ab586e-91db-44a2-adc2-9e6bebc58877.csv
+result: feebdaed
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 14
+  workflows : 5
+  tasks     : 9
+  campaigns : c11b21ea
+
+  by subtype:
+    academy_lifecycle            6
+    academy_action               3
+
+  by agent:
+    AgentId<73d25a92>            3
+    AgentId<c98a9987>            3
+    AgentId<d64af8df>            3
+
+  by status:
+    FINISHED                     9
+============================================================
+campaign c11b21ea  workflow: 03-agent-agent
+  └─ agent workflow: Reverser:AgentId<73d25a92>
+  └─ agent workflow: Lowerer:AgentId<c98a9987>
+  └─ agent workflow: Coordinator:AgentId<d64af8df>
+campaign c11b21ea  workflow: 03-agent-agent
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+• Actions (in order)  activity  [agent]  used -> generated
+    process                [Coordinator]  {'args': ['DEADBEEF'], 'kwargs': {}} -> feebdaed
+    lower                  [Lowerer]  {'args': ['DEADBEEF'], 'kwargs': {}} -> deadbeef
+    reverse                [Reverser]  {'args': ['deadbeef'], 'kwargs': {}} -> feebdaed
+
+• Cross-agent calls  (caller -> callee.action)
+    AgentId<d64af8df> -> lower [Lowerer AgentId<c98a9987]
+    AgentId<d64af8df> -> reverse [Reverser AgentId<73d25a92]
+----------------------------------------------------------------
+
+============================================================
+03-agent-agent -- provenance
+============================================================
+
+  records by subtype:
+    academy_lifecycle      │ ████████████████████████████████ 6
+    academy_action         │ ████████████████                 3
+
+  tasks by activity:
+    agent_startup          │ ████████████████████████████████ 3
+    agent_shutdown         │ ████████████████████████████████ 3
+    lower                  │ ███████████                      1
+    reverse                │ ███████████                      1
+    process                │ ███████████                      1
+============================================================
+provenance card -> ./03-agent-agent_card.md
+
+provenance saved in: runs/03-agent-agent_20260804-122505

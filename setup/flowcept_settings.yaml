@@ -1,0 +1,84 @@
+# Flowcept settings for the tutorial -- OFFLINE profile.
+#
+# Copy this to ~/.flowcept/settings.yaml (the setup step does this), or point
+# Flowcept at it with:  export FLOWCEPT_SETTINGS_PATH=$PWD/setup/flowcept_settings.yaml
+#
+# This profile needs NO services: no message queue, no MongoDB. Every provenance
+# record is written to a JSONL buffer (flowcept_buffer.jsonl). Perfect for
+# laptops and Aurora compute nodes (which have no outbound internet).
+#
+# To go "online" (Redis message queue + MongoDB store) for live querying, see
+# setup/flowcept_settings_online.yaml and Module 5.
+
+flowcept_version: 0.10.2
+
+project:
+  debug: false
+  replace_non_json_serializable: true
+  # Write all provenance to a local JSONL buffer (the offline path).
+  dump_buffer:
+    enabled: true
+    path: flowcept_buffer.jsonl
+  enrich_messages: false
+
+log:
+  log_file_level: disable
+  log_stream_level: disable
+
+# Capture CPU + memory telemetry so Module 6 has telemetry to analyze.
+# (Requires the 'telemetry' extra: pip install "flowcept[telemetry]" -> psutil.)
+telemetry_capture:
+  cpu: true
+  per_cpu: false
+  mem: true
+  disk: false
+  network: false
+  gpu: null
+
+instrumentation:
+  enabled: true
+
+# Message queue OFF (offline).
+mq:
+  enabled: false
+  type: redis
+  host: localhost
+  port: 6379
+
+kv_db:
+  enabled: false
+  host: localhost
+  port: 6379
+
+# Databases OFF (offline). Analysis reads the JSONL buffer directly.
+databases:
+  mongodb:
+    enabled: false
+    host: localhost
+    port: 27017
+    db: flowcept
+  lmdb:
+    enabled: false
+    path: flowcept_lmdb
+
+# Agentic provenance plugins.
+# Left DISABLED here so the tutorial controls capture explicitly via
+# flowcept_academy_tutorial.capture.captured() -- one plugin, one report.
+# To use the ZERO-CODE path instead, set academy.enabled: true and wrap your
+# app in a bare `with Flowcept(): ...` (see Module 3.4).
+plugins:
+  academy:
+    enabled: false
+    kind: academy
+    workflow_name: "academy-workflow"
+    performance_tracking: true
+  langgraph:
+    enabled: false
+    kind: langgraph
+    workflow_name: "langgraph-workflow"
+    performance_tracking: true
+
+# The Flowcept MCP querying agent (natural-language provenance queries).
+# Optional; see Module 6.
+agent:
+  enabled: false

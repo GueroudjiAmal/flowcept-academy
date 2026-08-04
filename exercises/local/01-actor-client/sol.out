@@ -1,0 +1,67 @@
+[FlowceptAcademyPlugin] Started
+  workflow_id : 0b4c255e-988d-4ac7-b5a1-f030cca26d94
+  campaign_id : d1242450-e0c5-40d8-8a88-01dd52e5aa38
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  3       0.308     102.8     87.2    113.4
+flush                        1       0.420     420.2    420.2    420.2
+intercept_task               5       0.197      39.4     33.2     44.9
+lifecycle_emit               2       0.191      95.5     80.3    110.8
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_0b4c255e-988d-4ac7-b5a1-f030cca26d94.csv
+result: 1
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 8
+  workflows : 3
+  tasks     : 5
+  campaigns : d1242450
+
+  by subtype:
+    academy_action               3
+    academy_lifecycle            2
+
+  by agent:
+    AgentId<b3bd0fdc>            5
+
+  by status:
+    FINISHED                     5
+============================================================
+campaign d1242450  workflow: 01-actor-client
+  └─ agent workflow: Counter:AgentId<b3bd0fdc>
+campaign d1242450  workflow: 01-actor-client
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+• Actions (in order)  activity  [agent]  used -> generated
+    get_count              [Counter]  {'args': [], 'kwargs': {}} -> 0
+    increment              [Counter]  {'args': [], 'kwargs': {}} -> None
+    get_count              [Counter]  {'args': [], 'kwargs': {}} -> 1
+----------------------------------------------------------------
+
+============================================================
+01-actor-client -- provenance
+============================================================
+
+  records by subtype:
+    academy_action         │ ████████████████████████████████ 3
+    academy_lifecycle      │ █████████████████████            2
+
+  tasks by activity:
+    get_count              │ ████████████████████████████████ 2
+    agent_startup          │ ████████████████                 1
+    increment              │ ████████████████                 1
+    agent_shutdown         │ ████████████████                 1
+============================================================
+provenance card -> ./01-actor-client_card.md
+
+provenance saved in: runs/01-actor-client_20260804-123009

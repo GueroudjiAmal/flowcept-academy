@@ -1,0 +1,429 @@
+% =====================================================================
+% Capturing Provenance of Academy Examples with Flowcept -- 1h tutorial
+% Compile: make   (pdflatex + beamer + metropolis)
+% Outline: Academy reminder -> Flowcept + ex 1/2/3 -> agents & LLMs
+%          -> advanced: LangGraph (07) + Parsl (05) -> inspecting failures
+% =====================================================================
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{metropolis}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+
+\definecolor{fcblue}{HTML}{2A78D6}
+\definecolor{fcorange}{HTML}{EB6834}
+\definecolor{fcaqua}{HTML}{1BAF7A}
+\definecolor{fcink}{HTML}{0B0B0B}
+\definecolor{fcmuted}{HTML}{898781}
+\definecolor{fccode}{HTML}{F5F5F2}
+\definecolor{fcred}{HTML}{D03B3B}
+
+\setbeamercolor{frametitle}{bg=fcblue}
+\setbeamercolor{progress bar}{fg=fcorange}
+\setbeamercolor{alerted text}{fg=fcorange}
+
+\lstdefinestyle{py}{language=Python,basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{fcblue}\bfseries,commentstyle=\color{fcmuted}\itshape,
+  stringstyle=\color{fcaqua},backgroundcolor=\color{fccode},
+  numbers=none,frame=none,breaklines=true,showstringspaces=false,
+  aboveskip=3pt,belowskip=2pt,morekeywords={async,await,self,with,as,for}}
+\lstset{style=py}
+\lstdefinestyle{sh}{language=bash,basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{fccode},breaklines=true}
+
+\title{Capturing Provenance of Academy Examples with Flowcept}
+\subtitle{A 1-hour, hands-on tutorial --- CPU-friendly, Argo/OpenAI/local LLM}
+\author{Amal Gueroudji}
+\date{ATPESC}
+\institute{Argonne National Laboratory}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{What we'll do}
+  Take the \textbf{stock Academy examples}, instrument each with \textbf{Flowcept}
+  to capture provenance (\alert{zero changes to agent logic}), and \textbf{inspect}
+  what happened --- including \alert{where things fail}.
+  \vspace{0.6em}
+  \begin{tabular}{r l}
+    \toprule
+    \textbf{Part} & \textbf{Content} \\
+    \midrule
+    0 & Why provenance --- and why it matters for \emph{agentic} systems \\
+    1 & Academy in a nutshell (reminder) \\
+    2 & Flowcept + examples 1, 2, 3 --- and how to inspect provenance \\
+    3 & Advanced: agents \& LLMs (examples 6, 8) \\
+    4 & Extra advanced: LangGraph + real xTB (7) + Parsl (5), and failures \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}\\
+  \small \textbf{Terminal-only} (no images): text summaries, ASCII dashboards, a
+  markdown provenance card --- runs over SSH on Aurora. Every run writes to its own
+  \texttt{runs/<id>\_<date-time>/}.
+\end{frame}
+
+\begin{frame}[fragile]{How the tutorial is laid out}
+  Eight stock Academy examples, each a \textbf{step-by-step exercise}. As shipped
+  each one \emph{runs but records nothing}; you turn provenance on one \textbf{STEP}
+  at a time by uncommenting a block and re-running.
+\begin{lstlisting}[style=sh]
+exercises/
+  local/    run on a laptop / login shell   (python exercise.py)
+  aurora/   run on ALCF Aurora              (qsub submit.pbs; shared env.sh)
+    <id>/   exercise.py  solution.py  README.md  [submit.pbs]
+\end{lstlisting}
+  \begin{itemize}\small
+    \item \texttt{exercise.py} --- STEP 0 baseline, then STEP 1 capture, 2 inspect,
+      3 analyze, 4 card, 5 query (uncomment as you go)
+    \item \texttt{solution.py} --- every step already enabled (the reference)
+    \item \texttt{flowcept\_academy/} is a small \textbf{library} the exercises build on
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Setup --- one command, one env, from scratch}
+\begin{lstlisting}[style=sh]
+bash setup/install.sh        # builds ONE conda env for all 8 (CPU)
+conda activate flowcept-academy
+cd exercises/local/01-actor-client && python exercise.py
+\end{lstlisting}
+  \small \texttt{install.sh} builds a single \texttt{flowcept-academy} conda env and
+  installs Flowcept (agentic branch) + Academy + Parsl + LangGraph + a CPU build of
+  \texttt{torch}/\texttt{transformers}, plus \texttt{rdkit}/\texttt{xtb-python} for
+  example 07's real chemistry, and drops the offline Flowcept settings in place.
+  \alert{One env for the whole tutorial} --- no venv, no per-exercise env. No Redis,
+  no Mongo, no GPU.
+\end{frame}
+
+% =====================================================================
+\section{Why provenance?}
+
+\begin{frame}{Why capture provenance at all?}
+  Provenance = the recorded history of \emph{what ran, on what inputs, producing
+  what outputs, when, where, and how it all connects}.
+  \vspace{0.5em}
+  \begin{itemize}
+    \item \textbf{Reproducibility} --- rerun and get the same result; know exactly
+      what code, data, and parameters produced a number.
+    \item \textbf{Debugging} --- when something breaks, see \emph{which} step failed,
+      on \emph{what} input, and why --- not just a stack trace.
+    \item \textbf{Trust \& audit} --- verify and defend results; a scientific claim
+      is only as good as the record behind it.
+    \item \textbf{Cost \& performance} --- see where time and tokens go.
+  \end{itemize}
+  \vspace{0.3em}
+  \small For classic HPC workflows this is valuable. For \alert{agentic} systems it
+  becomes \alert{essential} --- next slide.
+\end{frame}
+
+\begin{frame}{Why it matters \emph{more} for agentic systems}
+  Traditional code does what you wrote. \textbf{Agents decide what to do at
+  runtime} --- so the ``what happened'' isn't in your source.
+  \vspace{0.4em}
+  \begin{itemize}\small
+    \item \textbf{Non-determinism.} LLM calls sample --- the same prompt yields
+      different outputs. You \emph{cannot} reproduce a run without recording the
+      actual prompt, response, model, and tokens.
+    \item \textbf{Autonomy \& emergence.} \texttt{@loop}s act on their own; agents
+      choose which tool/peer to call. The control flow is \emph{decided}, not
+      declared --- capture is the only way to know the real path taken.
+    \item \textbf{Distribution across boundaries.} Work spans agents, processes,
+      nodes, and \emph{frameworks} (Academy + LangGraph + Parsl). Lineage that
+      crosses those boundaries is invisible without provenance.
+    \item \textbf{Opaque reasoning.} Prompts, tool calls, and delegations bury the
+      ``why.'' Provenance keeps every prompt/response --- the audit trail.
+    \item \textbf{Failure is normal.} Small LLMs propose malformed inputs; agents
+      derail mid-plan. You need the exact failing step + input.
+  \end{itemize}
+  \centering\small\alert{Agents are non-deterministic, autonomous, and
+  distributed --- exactly the case provenance was made for.}
+\end{frame}
+
+% =====================================================================
+\section{Part 1 --- Academy, a reminder}
+
+\begin{frame}{Academy in a nutshell}
+  A framework for \textbf{distributed multi-agent systems} for science.
+  \begin{itemize}
+    \item \texttt{Agent} --- a class holding state + behaviors
+    \item \texttt{@action} --- a callable behavior (request/response)
+    \item \texttt{@loop} --- autonomous background behavior
+    \item \texttt{Handle} --- a remote reference to an agent
+    \item \texttt{Manager} + \texttt{Exchange} --- launch agents \& route messages
+  \end{itemize}
+  \vspace{0.4em}
+  Scales from local threads $\to$ processes $\to$ Globus Compute / Parsl across nodes.
+\end{frame}
+
+\begin{frame}[fragile]{Academy: the shape of an agent}
+\begin{lstlisting}
+class Coordinator(Agent):
+    @action
+    async def process(self, text: str) -> str:
+        text = await self.lowerer.lower(text)      # cross-agent call
+        return await self.reverser.reverse(text)   # cross-agent call
+
+async with await Manager.from_exchange_factory(
+        factory=LocalExchangeFactory(),
+        executors=ThreadPoolExecutor()) as manager:
+    coord = await manager.launch(Coordinator, args=(lo, re))
+    await coord.process("DEADBEEF")     # -> "feebdaed"
+\end{lstlisting}
+  \small These are Academy's own examples
+  (\texttt{github.com/academy-agents/academy}); we instrument them unchanged.
+\end{frame}
+
+% =====================================================================
+\section{Part 2 --- Flowcept + examples 1, 2, 3}
+
+\begin{frame}{Flowcept: provenance, one line to capture}
+  \textbf{Flowcept} records \emph{what ran, with what inputs/outputs, when, and how
+  it connects} --- the provenance graph. Its \emph{agentic} plugin patches Academy's
+  \texttt{Runtime}, so capture is automatic.
+  \vspace{0.4em}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \small Model: \texttt{campaign} $\to$ \texttt{workflow} $\to$ \texttt{task}
+      (action / loop / llm\_call), with \texttt{used}/\texttt{generated} and
+      \texttt{parent\_task\_id} lineage.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{exampleblock}{Zero agent-code changes}\small
+        Wrap the run; the plugin does the rest.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Turn capture on --- STEP 1}
+\begin{lstlisting}
+from flowcept_academy.capture import captured   # zero agent-code changes
+from flowcept_academy.util import capture_run    # -> runs/<id>_<date-time>/
+
+with capture_run("03-agent-agent") as run_dir:
+    with captured(workflow_name="03-agent-agent"):
+        result = asyncio.run(run())    # the stock example, now captured
+    # -> flowcept_buffer.jsonl in run_dir  (offline: no Redis / no Mongo)
+\end{lstlisting}
+  \small In the exercise you just uncomment this block and re-run. Everything a run
+  produces --- buffer, perf CSV, the markdown card --- lands together in the run dir:
+\begin{lstlisting}[style=sh]
+cd exercises/local/03-agent-agent && python exercise.py
+# -> runs/03-agent-agent_<date-time>/ : flowcept_buffer.jsonl + card.md + perf.csv
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Outcomes: examples 1, 2, 3}
+  Each example exercises a different slice of the provenance model:
+  \vspace{0.4em}
+  \begin{tabular}{l l}
+    \toprule
+    \textbf{Example} & \textbf{Provenance captured} \\
+    \midrule
+    01 actor-client & agent lifecycle + actions (\texttt{increment} $\to$ count) \\
+    02 agent-loop & autonomous \texttt{@loop} start/exit events (\texttt{group\_id}) \\
+    03 agent-agent & \textbf{cross-agent calls} (caller $\to$ callee.action) \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}\\
+  \small e.g. 03 shows the chain \texttt{DEADBEEF} $\to$ \texttt{deadbeef} $\to$
+  \texttt{feebdaed} across three agents.
+\end{frame}
+
+\begin{frame}[fragile]{How to inspect the provenance}
+  Three built-in ways, for \emph{any} run --- all terminal (from an example folder):
+\begin{lstlisting}[style=sh]
+# 1) tailored, content-aware analysis + text dashboard (printed by each run)
+python solution.py                       # STEPs 2-4 print the report
+
+# 2) analyze any captured buffer / whole run dir
+python ../../../provenance/analyze.py runs/03-agent-agent_*
+
+# 3) interactive queries: ask("...") turns NL into pandas
+python ../../../provenance/query.py runs/03-agent-agent_* --ask "show the cross-agent calls"
+\end{lstlisting}
+  \small The analysis auto-adapts: it reports only what the example produced
+  (actions, loops, cross-agent calls, LLM calls, \dots) --- and any failures.
+  Flowcept's markdown provenance card is written into each run dir.
+\end{frame}
+
+\begin{frame}[fragile]{The provenance dashboard --- in the terminal}
+  No images: each run prints an ASCII dashboard (records by subtype; LLM tokens by
+  agent, or tasks by activity; capture overhead). \small Real \texttt{06-llm} run:
+\begin{lstlisting}[style=sh]
+============================================================
+06-llm -- provenance
+============================================================
+  records by subtype:
+    academy_lifecycle  | ################################ 4
+    llm_call           | ################                 2
+    academy_action     | ################                 2
+  LLM tokens by agent:
+    Orchestrator       | ################################ 140
+  capture overhead (total ms by category):
+    flush              | ################################ 1.135
+    llm_hook           | #########################        0.892
+    intercept_task     | #######################          0.836
+============================================================
+\end{lstlisting}
+\end{frame}
+
+% =====================================================================
+\section{Part 3 --- Advanced: agents \& LLMs}
+
+\begin{frame}{LLM backend: Argo $\to$ OpenAI $\to$ local CPU model}
+  \begin{itemize}
+    \item \texttt{ARGO\_USER} set $\to$ \alert{ANL Argo gateway} (on Aurora / ANL network), native tool calling
+    \item else \texttt{OPENAI\_API\_KEY} set $\to$ \alert{OpenAI}
+      (\texttt{api.openai.com}, \texttt{OPENAI\_MODEL}, default \texttt{gpt-4o-mini}), native tool calling
+    \item else $\to$ \alert{local CPU model}
+      (\texttt{Qwen2.5-0.5B-Instruct}, offline, no GPU)
+    \item \textbf{no mock}: every response is from a real model; \texttt{chat()}
+      raises rather than fabricate text
+  \end{itemize}
+  \small Checked in priority order, first match wins; force with
+  \texttt{FLOWCEPT\_TUTORIAL\_LLM=argo|openai|local}. Every call is recorded as an
+  \texttt{llm\_call} (model, prompt, response, tokens), linked to its action.
+\end{frame}
+
+\begin{frame}[fragile]{Examples 6 \& 8: LLM-driven agents (vendored upstream)}
+\begin{lstlisting}
+# 06: the upstream Orchestrator builds a LangChain ReACT agent over a
+# tool that messages a separate MySimAgent -- the LLM decides to call it.
+agent = create_agent(make_chat_model(), tools=[sim_tool])
+result = await agent.ainvoke({"messages": [("user", question)]})
+\end{lstlisting}
+  \begin{itemize}\small
+    \item \textbf{06 llm}: ReACT agent $\to$ \texttt{llm\_call} +
+      \texttt{langgraph\_node}/\texttt{graph}, and a cross-agent tool call when the
+      LLM invokes the tool
+    \item \textbf{08 discussion}: multi-agent group chat --- three
+      \texttt{GroupChatAgent}s (Manager, Assistant, Senior Engineer) +
+      \texttt{RoundRobinGroupChatManager} with a supervisor \texttt{@loop};
+      per-turn \texttt{llm\_call}s, tokens per agent, bounded by \texttt{max\_rounds}
+  \end{itemize}
+  \small The LLM is injected via \texttt{make\_chat\_model()} (Argo $\to$ OpenAI $\to$
+  local) exactly where upstream builds \texttt{ChatOpenAI} --- \alert{zero other agent-code changes}.
+\end{frame}
+
+\begin{frame}[fragile]{What gets captured --- a real \texttt{06-llm} run}
+  \small The upstream ReACT agent, run on the \textbf{local 0.5B} model. One
+  \texttt{@action} wraps one \texttt{langgraph\_graph}/\texttt{node}, which drives one
+  \texttt{llm\_call} --- all sharing the campaign:
+\begin{lstlisting}[style=sh]
+* Records (subtype  activity)
+    academy_action    answer               <- Orchestrator.@action
+    langgraph_graph   LangGraph            <- create_agent ReACT graph
+    langgraph_node    model                <- the LLM step in the graph
+    llm_call          _AsyncChatHuggingFace
+        prompt : ...simulated ionization energy of benzene...
+        answer : The simulated ionization energy of benzene can be
+                 calculated using quantum chemistry methods, such as DFT...
+\end{lstlisting}
+  \small The action, the graph, its node, and the LLM call are one connected,
+  queryable lineage. \alert{Note}: the 0.5B model answered \emph{directly} instead of
+  calling the tool --- provenance is exactly how you \emph{see} that it skipped the
+  tool. A tool-capable backend (Argo) instead emits a cross-agent
+  \texttt{tool\_call} to \texttt{MySimAgent}.
+\end{frame}
+
+% =====================================================================
+\section{Part 4 --- Extra advanced \& failures}
+
+\begin{frame}[fragile]{Example 7: cross-framework (Academy + LangGraph + real xTB)}
+  The upstream \texttt{mol\_design\_agents.py}, \alert{unchanged}: a LangGraph
+  \texttt{StateGraph} (plan $\to$ tool\_calling $\to$ simulate $\to$ conclude $\to$
+  critique $\to$ update, looping) runs inside an Academy \texttt{@loop}, and
+  \texttt{simulate} calls \textbf{real GFN2-xTB} (RDKit $\to$ ASE $\to$ xtb).
+  \vspace{0.3em}
+  \begin{itemize}\small
+    \item \textbf{one shared \texttt{campaign\_id}} across both plugins (Academy + LangGraph)
+    \item three layers in one lineage: \texttt{academy\_loop} $\to$
+      \texttt{langgraph\_node} $\to$ \texttt{tool\_call} (the xTB energy)
+    \item LLM = Argo \texttt{gpt-4o} (tool-capable) --- drives the \texttt{tool\_calling} node
+  \end{itemize}
+  \small Real run --- \texttt{tool\_call}=10, \texttt{langgraph\_node}=9,
+  \texttt{llm\_call}=6, \texttt{academy\_loop}=2 (1 campaign):
+\begin{lstlisting}[style=sh]
+* nodes: plan, tool_calling(2), simulate(2), should_continue,
+         conclude, critique, update
+* real xTB ionization energies (charged - neutral, eV):
+    simulate -> 13.1975...    simulate -> 14.1156...
+* llm_call model=gpt-4o-2024-11-20  parent=tool_calling
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Example 5: Parsl}
+\begin{lstlisting}
+class SimulationAgent(Agent):
+    @action
+    async def run_expensive_task(self) -> int:
+        return await asyncio.wrap_future(expensive_task())  # a Parsl app
+\end{lstlisting}
+  \small The agent delegates to a \textbf{Parsl} task; provenance captures the
+  dispatching action and its result. (Example 07 shows the same pattern with real
+  chemistry --- the agent's process pool runs GFN2-xTB, each emitting a
+  \texttt{tool\_call}.)
+\end{frame}
+
+\begin{frame}[fragile]{Inspecting failures --- where provenance shines}
+  Agents (and LLMs) get things wrong. In \textbf{example 07 this is not staged} ---
+  the LLM proposes candidate molecules and some simply \alert{can't be built} by
+  RDKit/xTB. Flowcept records each failed \texttt{tool\_call} with
+  \textcolor{fcred}{\texttt{status=ERROR}} + real \texttt{stderr}:
+\begin{lstlisting}[style=sh]
+  status:  FINISHED 22   ERROR 10
+  !  Failures captured (status=ERROR) -- what the agent actually tried:
+    tool_call/compute_ionization_energy  [ERROR]
+      stderr: Parse failure for C3N2O
+    tool_call/compute_ionization_energy  [ERROR]
+      stderr: Parse failure for CF3NC(N)=O
+    tool_call/compute_ionization_energy  [ERROR]
+      stderr: Parse failure for C6H5NC(N)=O
+    ... (8 xTB parse failures + 1 propagated langgraph_node)
+\end{lstlisting}
+  \small You see \emph{which} molecule the LLM invented, that xTB rejected it, and
+  that the successful runs still gave real energies (13.20, 14.12 eV) --- the
+  debugging payoff, and the reason agentic runs need this most.
+\end{frame}
+
+\begin{frame}[fragile]{Running on Aurora (CPU, offline, terminal-only)}
+  Each example under \texttt{exercises/aurora/<id>/} has its own \texttt{submit.pbs};
+  all share \texttt{exercises/aurora/env.sh} (modules + conda env + offline LLM + settings).
+\begin{lstlisting}[style=sh]
+# once, on a login node (has internet): build the env + pre-cache the local model
+bash setup/install.sh            # -> conda env `flowcept-academy`
+source exercises/aurora/env.sh   # frameworks; conda activate; HF offline; settings
+python -c "from flowcept_academy.util import chat; print(chat('hi'))"
+
+# then submit an exercise (edit -A <project> first)
+cd exercises/aurora/06-llm && qsub submit.pbs   # -> runs/06-llm_<date-time>/
+\end{lstlisting}
+  \small \texttt{env.sh} sets \texttt{HF\_HUB\_OFFLINE=1} +
+  \texttt{FLOWCEPT\_TUTORIAL\_LLM=local}, so compute nodes need no network (or use
+  \texttt{ARGO\_USER}). Provenance stays offline; inspect with the same terminal
+  tools --- no images to shuttle around.
+\end{frame}
+
+\begin{frame}{Recap}
+  \begin{itemize}
+    \item \textbf{Capture:} one line (\texttt{captured()}) instruments any Academy
+      example --- zero agent-code changes.
+    \item \textbf{Examples:} actor, loop, cross-agent, multi-process, Parsl, LLM
+      agents, and cross-framework LangGraph + real xTB (07).
+    \item \textbf{LLM:} Argo $\to$ OpenAI $\to$ local CPU model.
+    \item \textbf{Inspect:} tailored analysis, text dashboards, provenance cards
+      --- all terminal, including \alert{failures} (status=ERROR + stderr).
+    \item \textbf{Outputs:} every run in its own \texttt{runs/<id>\_<date-time>/}.
+  \end{itemize}
+  \vspace{0.4em}
+  \centering\Large\textbf{instrument $\to$ capture $\to$ inspect (even the failures)}
+\end{frame}
+
+\begin{frame}[standout]
+  Thank you!\\[0.4em]
+  \normalsize \texttt{exercises/\{local,aurora\}} · \texttt{provenance/analyze.py} ·
+  \texttt{slides/} · upstream examples: \texttt{github.com/academy-agents/academy}
+\end{frame}
+
+\end{document}

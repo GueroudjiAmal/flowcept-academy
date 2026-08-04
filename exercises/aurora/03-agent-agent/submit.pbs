@@ -1,0 +1,18 @@
+#!/bin/bash -l
+# PBS submission for exercise 03 (03-agent-agent) on Aurora (ALCF).
+# Edit -A <project>, then:  qsub submit.pbs
+#PBS -A <project>
+#PBS -q debug
+#PBS -l select=1:ncpus=208
+#PBS -l walltime=00:20:00
+#PBS -l filesystems=home:flare
+#PBS -N fca-03-agent-agent
+#PBS -j oe
+
+set -euo pipefail
+cd "$PBS_O_WORKDIR"
+source ../env.sh                 # modules + conda env + offline LLM + Flowcept settings
+
+python solution.py               # (use exercise.py to work through the steps)
+
+echo "provenance -> $PBS_O_WORKDIR/runs/03-agent-agent_<date-time>/  (buffer, perf CSV, 03-agent-agent_card.md)"

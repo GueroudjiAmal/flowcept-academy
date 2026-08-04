@@ -1,0 +1,64 @@
+[FlowceptAcademyPlugin] Started
+  workflow_id : b0e8ec30-1570-4be2-aa92-39eeab28e494
+  campaign_id : 89b761e2-64ff-4280-a982-d48d5fb0d3e4
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  1       0.149     148.6    148.6    148.6
+flush                        1       0.467     467.5    467.5    467.5
+intercept_task               3       0.178      59.5     57.7     61.0
+lifecycle_emit               2       0.249     124.7    111.4    138.1
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_b0e8ec30-1570-4be2-aa92-39eeab28e494.csv
+result: 42
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 6
+  workflows : 3
+  tasks     : 3
+  campaigns : 89b761e2
+
+  by subtype:
+    academy_lifecycle            2
+    academy_action               1
+
+  by agent:
+    AgentId<dce11bfa>            3
+
+  by status:
+    FINISHED                     3
+============================================================
+campaign 89b761e2  workflow: 05-parsl
+  └─ agent workflow: SimulationAgent:AgentId<dce11bfa>
+campaign 89b761e2  workflow: 05-parsl
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+• Actions (in order)  activity  [agent]  used -> generated
+    run_expensive_task     [SimulationAgent]  {'args': [], 'kwargs': {}} -> 42
+----------------------------------------------------------------
+
+============================================================
+05-parsl -- provenance
+============================================================
+
+  records by subtype:
+    academy_lifecycle      │ ████████████████████████████████ 2
+    academy_action         │ ████████████████                 1
+
+  tasks by activity:
+    agent_startup          │ ████████████████████████████████ 1
+    run_expensive_task     │ ████████████████████████████████ 1
+    agent_shutdown         │ ████████████████████████████████ 1
+============================================================
+provenance card -> ./05-parsl_card.md
+
+provenance saved in: runs/05-parsl_20260804-123051
