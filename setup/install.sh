@@ -47,8 +47,14 @@ case "$MODE" in
         ;;
     aurora)
         # ALCF Aurora: the `frameworks` module is what puts conda on PATH.
+        # Lmod (and conda's module hook) deref $ZSH_EVAL_CONTEXT -- a zsh-only var,
+        # unset in bash -> fatal under this script's `set -u`. Define it empty so no
+        # deref trips nounset; also drop nounset around the module calls themselves.
+        export ZSH_EVAL_CONTEXT="${ZSH_EVAL_CONTEXT:-}"
+        set +u
         module use /soft/modulefiles
         module load frameworks
+        set -u
         ENV_PREFIX="${FLOWCEPT_ENV_PREFIX:-$REPO/envs/$ENV}"
         case "$ENV_PREFIX" in
             "$HOME"/*|"$HOME")

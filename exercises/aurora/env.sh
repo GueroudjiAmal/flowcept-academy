@@ -11,13 +11,34 @@
 # ~/.bashrc so batch jobs see it too); otherwise this falls back to $REPO/envs/.
 #   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/$USER/envs/flowcept-academy
 
+# This file must be SOURCED, not executed. It runs `conda activate` and `export`s
+# INTO your shell; `bash env.sh` runs in a subshell where those changes die on exit
+# (and `module` isn't even defined in a non-login shell). Use:  source ../env.sh
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    echo "!! Don't execute this -- SOURCE it:   source ${BASH_SOURCE[0]}" >&2
+    exit 1
+fi
+
+# Lmod (and conda's module hook) dereference $ZSH_EVAL_CONTEXT -- a zsh-only var,
+# unset in bash -- which is FATAL under a caller's `set -u`. Define it empty so no
+# deref trips nounset, here or in the module/conda subshells this spawns. (A real
+# zsh sets its own, so an inherited empty value is harmless.)
+export ZSH_EVAL_CONTEXT="${ZSH_EVAL_CONTEXT:-}"
+
 # Repo root = two levels up from exercises/aurora/
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_PREFIX="${FLOWCEPT_ENV_PREFIX:-$REPO/envs/flowcept-academy}"
 
 # --- ALCF modules (provide conda) ------------------------------------------
+# Lmod's bash init dereferences $ZSH_EVAL_CONTEXT unguarded, which is FATAL under a
+# caller's `set -u` (every submit.pbs runs `set -euo pipefail`; `|| true` does NOT
+# rescue a nounset death). Drop nounset around the module calls, then restore it.
+_flowcept_had_u=0; if [[ $- == *u* ]]; then _flowcept_had_u=1; fi
+set +u
 module use /soft/modulefiles 2>/dev/null || true
 module load frameworks 2>/dev/null || true
+if [[ $_flowcept_had_u == 1 ]]; then set -u; fi
+unset _flowcept_had_u
 
 # --- The single conda env (built once by setup/install.sh aurora) ----------
 # 'conda activate' needs conda's shell hook; submit.pbs falls back to `conda run`
