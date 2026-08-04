@@ -1,0 +1,412 @@
+[FlowceptAcademyPlugin] Started
+  workflow_id : 3e28bd53-4ad2-4a39-b044-ec285ac8e6fc
+  campaign_id : 385ca471-324a-4cf5-a384-3731b1c1503a
+  Capturing   : agent lifecycle (sub-workflows), action dispatch (telemetry + parent_task_id), loop events (group_id).
+  LLM capture : disabled (no hook provided)
+seeds: ['CNC(N)=O']
+Starting discovery campaign
+================================================================================
+[12:46:32] SMILES Parse Error: unclosed ring for input: 'CF3CNC(N)=O'
+[12:46:32] SMILES Parse Error: unclosed ring for input: 'CNC(N)=NO2'
+[08/04/26 12:49:32] ERROR    Task exception was never        base_events.py:1833
+                             retrieved                                          
+                             future: <Task finished                             
+                             name='Task-44'                                     
+                             coro=<StructuredTool.ainvoke()                     
+                             done, defined at                                   
+                             /home/agueroudji/miniconda3/env                    
+                             s/flowcept-academy/lib/python3.                    
+                             12/site-packages/langchain_core                    
+                             /tools/structured.py:59>                           
+                             exception=ValueError('Parse                        
+                             failure for CF3CNC(N)=O')>                         
+                             _RemoteTraceback:                                  
+                             """                                                
+                             Traceback (most recent call                        
+                             last):                                             
+                               File                                             
+                             "/home/agueroudji/miniconda3/en                    
+                             vs/flowcept-academy/lib/python3                    
+                             .12/concurrent/futures/process.                    
+                             py", line 264, in                                  
+                             _process_worker                                    
+                                 r =                                            
+                             call_item.fn(*call_item.args,                      
+                             **call_item.kwargs)                                
+                                     ^^^^^^^^^^^^^^^^^^^^^^^                    
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^                         
+                               File                                             
+                             "/home/agueroudji/Work/ATPESC/f                    
+                             lowcept-academy/exercises/local                    
+                             /07-mol-design/agent_src.py",                      
+                             line 102, in                                       
+                             _compute_energy_sync                               
+                                 xyz =                                          
+                             _generate_initial_xyz(smiles)                      
+                                       ^^^^^^^^^^^^^^^^^^^^^                    
+                             ^^^^^^^^                                           
+                               File                                             
+                             "/home/agueroudji/Work/ATPESC/f                    
+                             lowcept-academy/exercises/local                    
+                             /07-mol-design/agent_src.py",                      
+                             line 74, in                                        
+                             _generate_initial_xyz                              
+                                 raise ValueError(f'Parse                       
+                             failure for {mol_string}')                         
+                             ValueError: Parse failure for                      
+                             CF3CNC(N)=O                                        
+                             """                                                
+                                                                                
+                             The above exception was the                        
+                             direct cause of the following                      
+                             exception:                                         
+                                                                                
+                             ╭─ Traceback (most recent cal─╮                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/structur │                    
+                             │ ed.py:70 in ainvoke         │                    
+                             │                             │                    
+                             │    67 │   │   │   # If the  │                    
+                             │    68 │   │   │   return aw │                    
+                             │    69 │   │                 │                    
+                             │ ❱  70 │   │   return await  │                    
+                             │    71 │                     │                    
+                             │    72 │   # --- Tool ---    │                    
+                             │    73                       │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/base.py: │                    
+                             │ 748 in ainvoke              │                    
+                             │                             │                    
+                             │    745 │   │   **kwargs: An │                    
+                             │    746 │   ) -> Any:        │                    
+                             │    747 │   │   tool_input,  │                    
+                             │ ❱  748 │   │   return await │                    
+                             │    749 │                    │                    
+                             │    750 │   # --- Tool ---   │                    
+                             │    751                      │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/base.py: │                    
+                             │ 1230 in arun                │                    
+                             │                             │                    
+                             │   1227 │   │                │                    
+                             │   1228 │   │   if error_to_ │                    
+                             │   1229 │   │   │   await ru │                    
+                             │ ❱ 1230 │   │   │   raise er │                    
+                             │   1231 │   │                │                    
+                             │   1232 │   │   output = _fo │                    
+                             │   1233 │   │   await run_ma │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/base.py: │                    
+                             │ 1196 in arun                │                    
+                             │                             │                    
+                             │   1193 │   │   │   │   │    │                    
+                             │   1194 │   │   │   │        │                    
+                             │   1195 │   │   │   │   coro │                    
+                             │ ❱ 1196 │   │   │   │   resp │                    
+                             │   1197 │   │   │   if self. │                    
+                             │   1198 │   │   │   │   msg  │                    
+                             │   1199 │   │   │   │   │    │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/structur │                    
+                             │ ed.py:124 in _arun          │                    
+                             │                             │                    
+                             │   121 │   │   │   │   kwarg │                    
+                             │   122 │   │   │   if config │                    
+                             │   123 │   │   │   │   kwarg │                    
+                             │ ❱ 124 │   │   │   return aw │                    
+                             │   125 │   │                 │                    
+                             │   126 │   │   # If self.cor │                    
+                             │   127 │   │   # implementat │                    
+                             │                             │                    
+                             │ /home/agueroudji/Work/ATPES │                    
+                             │ C/flowcept-academy/exercise │                    
+                             │ s/local/07-mol-design/agent │                    
+                             │ _src.py:188 in              │                    
+                             │ compute_ionization_energy   │                    
+                             │                             │                    
+                             │   185 │   │   │   return se │                    
+                             │   186 │   │                 │                    
+                             │   187 │   │   loop = asynci │                    
+                             │ ❱ 188 │   │   ionization_en │                    
+                             │   189 │   │   │   self.pool │                    
+                             │   190 │   │   │   _compute_ │                    
+                             │   191 │   │   │   self.conf │                    
+                             ╰─────────────────────────────╯                    
+                             ValueError: Parse failure for                      
+                             CF3CNC(N)=O                                        
+[08/04/26 12:49:33] ERROR    Task exception was never        base_events.py:1833
+                             retrieved                                          
+                             future: <Task finished                             
+                             name='Task-38'                                     
+                             coro=<StructuredTool.ainvoke()                     
+                             done, defined at                                   
+                             /home/agueroudji/miniconda3/env                    
+                             s/flowcept-academy/lib/python3.                    
+                             12/site-packages/langchain_core                    
+                             /tools/structured.py:59>                           
+                             exception=ValueError('Parse                        
+                             failure for CNC(N)=NO2')>                          
+                             _RemoteTraceback:                                  
+                             """                                                
+                             Traceback (most recent call                        
+                             last):                                             
+                               File                                             
+                             "/home/agueroudji/miniconda3/en                    
+                             vs/flowcept-academy/lib/python3                    
+                             .12/concurrent/futures/process.                    
+                             py", line 264, in                                  
+                             _process_worker                                    
+                                 r =                                            
+                             call_item.fn(*call_item.args,                      
+                             **call_item.kwargs)                                
+                                     ^^^^^^^^^^^^^^^^^^^^^^^                    
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^                         
+                               File                                             
+                             "/home/agueroudji/Work/ATPESC/f                    
+                             lowcept-academy/exercises/local                    
+                             /07-mol-design/agent_src.py",                      
+                             line 102, in                                       
+                             _compute_energy_sync                               
+                                 xyz =                                          
+                             _generate_initial_xyz(smiles)                      
+                                       ^^^^^^^^^^^^^^^^^^^^^                    
+                             ^^^^^^^^                                           
+                               File                                             
+                             "/home/agueroudji/Work/ATPESC/f                    
+                             lowcept-academy/exercises/local                    
+                             /07-mol-design/agent_src.py",                      
+                             line 74, in                                        
+                             _generate_initial_xyz                              
+                                 raise ValueError(f'Parse                       
+                             failure for {mol_string}')                         
+                             ValueError: Parse failure for                      
+                             CNC(N)=NO2                                         
+                             """                                                
+                                                                                
+                             The above exception was the                        
+                             direct cause of the following                      
+                             exception:                                         
+                                                                                
+                             ╭─ Traceback (most recent cal─╮                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/structur │                    
+                             │ ed.py:70 in ainvoke         │                    
+                             │                             │                    
+                             │    67 │   │   │   # If the  │                    
+                             │    68 │   │   │   return aw │                    
+                             │    69 │   │                 │                    
+                             │ ❱  70 │   │   return await  │                    
+                             │    71 │                     │                    
+                             │    72 │   # --- Tool ---    │                    
+                             │    73                       │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/base.py: │                    
+                             │ 748 in ainvoke              │                    
+                             │                             │                    
+                             │    745 │   │   **kwargs: An │                    
+                             │    746 │   ) -> Any:        │                    
+                             │    747 │   │   tool_input,  │                    
+                             │ ❱  748 │   │   return await │                    
+                             │    749 │                    │                    
+                             │    750 │   # --- Tool ---   │                    
+                             │    751                      │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/base.py: │                    
+                             │ 1230 in arun                │                    
+                             │                             │                    
+                             │   1227 │   │                │                    
+                             │   1228 │   │   if error_to_ │                    
+                             │   1229 │   │   │   await ru │                    
+                             │ ❱ 1230 │   │   │   raise er │                    
+                             │   1231 │   │                │                    
+                             │   1232 │   │   output = _fo │                    
+                             │   1233 │   │   await run_ma │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/base.py: │                    
+                             │ 1196 in arun                │                    
+                             │                             │                    
+                             │   1193 │   │   │   │   │    │                    
+                             │   1194 │   │   │   │        │                    
+                             │   1195 │   │   │   │   coro │                    
+                             │ ❱ 1196 │   │   │   │   resp │                    
+                             │   1197 │   │   │   if self. │                    
+                             │   1198 │   │   │   │   msg  │                    
+                             │   1199 │   │   │   │   │    │                    
+                             │                             │                    
+                             │ /home/agueroudji/miniconda3 │                    
+                             │ /envs/flowcept-academy/lib/ │                    
+                             │ python3.12/site-packages/la │                    
+                             │ ngchain_core/tools/structur │                    
+                             │ ed.py:124 in _arun          │                    
+                             │                             │                    
+                             │   121 │   │   │   │   kwarg │                    
+                             │   122 │   │   │   if config │                    
+                             │   123 │   │   │   │   kwarg │                    
+                             │ ❱ 124 │   │   │   return aw │                    
+                             │   125 │   │                 │                    
+                             │   126 │   │   # If self.cor │                    
+                             │   127 │   │   # implementat │                    
+                             │                             │                    
+                             │ /home/agueroudji/Work/ATPES │                    
+                             │ C/flowcept-academy/exercise │                    
+                             │ s/local/07-mol-design/agent │                    
+                             │ _src.py:188 in              │                    
+                             │ compute_ionization_energy   │                    
+                             │                             │                    
+                             │   185 │   │   │   return se │                    
+                             │   186 │   │                 │                    
+                             │   187 │   │   loop = asynci │                    
+                             │ ❱ 188 │   │   ionization_en │                    
+                             │   189 │   │   │   self.pool │                    
+                             │   190 │   │   │   _compute_ │                    
+                             │   191 │   │   │   self.conf │                    
+                             ╰─────────────────────────────╯                    
+                             ValueError: Parse failure for                      
+                             CNC(N)=NO2                                         
+Progress report from agent 0
+Number of molecules simulated: 0
+Five best molecules: []
+================================================================================
+Progress report from agent 0
+Number of molecules simulated: 1
+Five best molecules: [('C1=NC(=O)NC=N1', 14.396372428871587)]
+================================================================================
+[FlowceptLangGraphPlugin] Stopped.
+
+[FlowceptLangGraphPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+chain_end                    2      10.697    5348.3   5212.9   5483.6
+chain_error                  2       0.354     177.1    148.7    205.6
+chain_start                  3      12.172    4057.3   1791.9   5452.9
+chat_model_start             2       6.534    3267.0   1817.9   4716.1
+flush                        1       0.564     564.3    564.3    564.3
+llm_end                      2      10.935    5467.4   5438.3   5496.5
+tool_end                     3    1247.481  415827.0  38602.8 605475.7
+tool_error                   2       0.797     398.6    199.0    598.1
+tool_start                   5     268.982   53796.4  50618.8  59285.3
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptLangGraphPlugin] Performance stats written to langgraph_provenance_perf_b71f6443-de5c-4df5-88a3-b9aacdd16b38.csv
+[FlowceptAcademyPlugin] Stopped.
+
+[FlowceptAcademyPlugin] Provenance overhead report:
+Category                     N   Total(ms)  Mean(µs)  Min(µs)  Max(µs)
+----------------------------------------------------------------------
+action_emit                  2       0.761     380.5    244.4    516.5
+flush                        1       0.299     298.5    298.5    298.5
+intercept_task               6       0.430      71.6     41.5    155.2
+lifecycle_emit               2       0.219     109.5     84.8    134.3
+loop_emit                    2       0.213     106.5    102.8    110.2
+  (N = event count; Total/Mean/Min/Max in ms/µs respectively)
+
+[FlowceptAcademyPlugin] Performance stats written to provenance_perf_3e28bd53-4ad2-4a39-b044-ec285ac8e6fc.csv
+best molecules: [('C1=NC(=O)NC=N1', 14.396372428871587)]
+============================================================
+PROVENANCE SUMMARY
+============================================================
+  records   : 22
+  workflows : 5
+  tasks     : 16
+  campaigns : 385ca471
+
+  by subtype:
+    tool_call                    5
+    langgraph_node               3
+    llm_call                     2
+    academy_loop                 2
+    academy_lifecycle            2
+    academy_action               2
+
+  by agent:
+    AgentId<6b802f5a>            6
+
+  by status:
+    FINISHED                     13
+    ERROR                        3
+============================================================
+campaign 385ca471  workflow: 07-mol-design
+  └─ agent workflow: LangGraph
+campaign 385ca471  workflow: 07-mol-design
+  └─ agent workflow: XTBSimulationAgent:AgentId<6b802f5a>
+campaign 385ca471  workflow: 07-mol-design
+
+----------------------------------------------------------------
+TAILORED ANALYSIS  (only what this example produced)
+----------------------------------------------------------------
+
+⚠  Failures captured (status=ERROR) -- provenance records what broke:
+    tool_call/compute_ionization_energy  [ERROR]  stderr: Parse failure for CF3CNC(N)=O
+    tool_call/compute_ionization_energy  [ERROR]  stderr: Parse failure for CNC(N)=NO2
+    langgraph_node/simulate  [ERROR]  stderr: 
+
+• Actions (in order)  activity  [agent]  used -> generated
+    report                 [XTBSimulationAgent]  {'args': [], 'kwargs': {}} -> []
+    report                 [XTBSimulationAgent]  {'args': [], 'kwargs': {}} -> [['C1=NC(=O)NC=N1', 14.396372428871587]]
+
+• Loop events (autonomous @loop; grouped by group_id)
+    conduct_simulation_campaign event=start  group=eba82d5f
+    conduct_simulation_campaign event=exit   group=eba82d5f
+
+• Cross-framework: LangGraph graph/nodes (Academy action -> LangGraph)
+    node  plan             group=60bc58e4 {'inputs': "SearchState(see… -> {'outputs': 'SearchState(se…
+    node  tool_calling     group=60bc58e4 {'inputs': 'SearchState(see… -> {'outputs': 'SearchState(se…
+    node  simulate         group=60bc58e4 {'inputs': 'SearchState(see… -> None
+    tool  compute_ionization_energy  parent=simulate {'input': "{'smiles': '… -> None
+    tool  compute_ionization_energy  parent=simulate {'input': "{'smiles': '… -> None
+    tool  compute_ionization_energy  parent=simulate {'input': "{'smiles': '… -> {'output': 14.396372428…
+    tool  compute_ionization_energy  parent=simulate {'input': "{'smiles': '… -> {'output': 14.827758726…
+    tool  compute_ionization_energy  parent=simulate {'input': "{'smiles': '… -> {'output': 13.203642522…
+
+• LLM calls  (call_type [agent] tokens; parent action; prompt -> response)
+    gpt-4o-2024-11-20 [None]  tokens=1440 model=gpt4o  parent=plan
+        prompt : None
+        answer : None
+    gpt-4o-2024-11-20 [None]  tokens=1554 model=gpt4o  parent=tool_calling
+        prompt : None
+        answer : None
+----------------------------------------------------------------
+
+============================================================
+07-mol-design -- provenance
+============================================================
+
+  records by subtype:
+    tool_call              │ ████████████████████████████████ 5
+    langgraph_node         │ ███████████████████              3
+    llm_call               │ █████████████                    2
+    academy_loop           │ █████████████                    2
+    academy_lifecycle      │ █████████████                    2
+    academy_action         │ █████████████                    2
+
+  LLM tokens by agent:
+    nan                    │ ████████████████████████████████ 2994
+============================================================
+provenance card -> ./07-mol-design_card.md
+
+provenance saved in: runs/07-mol-design_20260804-124607

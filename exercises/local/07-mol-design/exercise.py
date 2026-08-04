@@ -24,9 +24,10 @@ WHAT THE PROVENANCE REVEALS
       - The molecule -> ionization-energy results are REAL xTB numbers.
 
 NOTE (backend): `make_chat_model()` routes (in priority order) to Argo (native tool
-calling) when ARGO_USER is set, else OpenAI when OPENAI_API_KEY is set, else a local
-HuggingFace model. 07's `tool_calling` node retries until it gets a parseable tool
-call, so it needs a tool-capable backend -- run with ARGO_USER or OPENAI_API_KEY set.
+calling) when ARGO_USER is set, else vLLM when VLLM_BASE_URL is set, else OpenAI when
+OPENAI_API_KEY is set, else a local HuggingFace model. 07's `tool_calling` node retries
+until it gets a parseable tool call, so it needs a tool-capable backend -- run with
+ARGO_USER, VLLM_BASE_URL, or OPENAI_API_KEY set.
 The agent logic is byte-for-byte upstream (only the LLM constructor is routed).
 
 Reference: solution.py.  Upstream: academy-agents/academy examples/07-mol-design/
@@ -41,7 +42,12 @@ from academy.manager import Manager
 from agent_src import XTBConfig, XTBSimulationAgent  # <- vendored upstream
 
 SEEDS = ['CNC(N)=O']   # harness knob: how many campaigns to seed (upstream: 2)
-MAX_POLLS = 2          # harness knob: upstream polls forever (`while True`)
+# Harness knob: upstream polls forever (`while True`). Several polls (not 1-2)
+# because each round may propose SMILES the model writes in chemistry shorthand
+# (e.g. `CF3CNC(N)=O`), which RDKit rejects -- the upstream graph recovers by
+# feeding those parse failures back to the LLM, which fixes them a round or two
+# later. We give it that room and stop early the moment real energies appear.
+MAX_POLLS = 6
 POLL_SECONDS = 45
 
 
@@ -63,20 +69,32 @@ async def run() -> list:
         reports: list = []
         for _ in range(MAX_POLLS):
             await asyncio.sleep(POLL_SECONDS)
+            per_agent: list = []
             for i, agent in enumerate(agents):
                 report = await agent.report()
+                per_agent.append(report)
                 reports = report
                 print(f'Progress report from agent {i}')
                 print(f'Number of molecules simulated: {len(report)}')
                 print(f'Five best molecules: {report[:5]}')
             print('=' * 80)
+            # Stop early once every seed has produced real xTB energies.
+            if all(len(r) > 0 for r in per_agent):
+                break
         return reports
 
 
 def main() -> None:
+    import logging
     import os
     from flowcept_academy.util import quiet_logging
     quiet_logging()
+    # Presentation only (not agent logic): when the LLM proposes an invalid SMILES,
+    # the vendored campaign's fire-and-forget tool tasks surface asyncio's
+    # "Task exception was never retrieved" ERROR with a full traceback. The parse
+    # failure is already shown as a one-line RDKit "SMILES Parse Error", so silence
+    # asyncio's redundant traceback to keep the tutorial output readable.
+    logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
     # =====================================================================
     # STEP 0 -- BASELINE. Run the campaign; print the best molecules. No provenance.

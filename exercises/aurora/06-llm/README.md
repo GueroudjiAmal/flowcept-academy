@@ -4,8 +4,8 @@
 
 What it does: an `Orchestrator` builds a LangChain ReACT agent (`create_agent`)
 over a tool that messages a separate `MySimAgent`; the LLM decides whether to call
-the tool for a simulated energy, then writes the answer. (LLM = Argo → OpenAI →
-local CPU model, in priority order.)
+the tool for a simulated energy, then writes the answer. (LLM = Argo → vLLM →
+OpenAI → local CPU model, in priority order.)
 
 What the provenance reveals:
   - `llm_call` tasks linked to their enclosing `@action` (`answer`) via

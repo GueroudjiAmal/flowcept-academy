@@ -4,7 +4,7 @@
 Loads a Flowcept buffer (or a run directory) into a pandas DataFrame and drops you
 into a REPL with helpers -- and an ``ask("...")`` function that answers **natural
 language** questions by translating them to pandas with the tutorial's LLM
-(Argo → OpenAI → local CPU model, in priority order).
+(Argo → vLLM → OpenAI → local CPU model, in priority order).
 
 Usage
 -----
@@ -43,6 +43,9 @@ KEY_COLS = [
     "custom_metadata.cross_agent_call", "custom_metadata.agent_type",
     "used.call_type", "used.agent_class", "used.user_prompt",
     "generated.total_tokens", "generated.response_text",
+    # LangGraph-callback llm_call records (e.g. 07) use these instead of
+    # used.user_prompt / generated.response_text:
+    "used.messages", "used.model", "generated.text",
 ]
 
 
@@ -105,6 +108,10 @@ def make_ask(df: pd.DataFrame):
             f"Columns: {', '.join(cols)}. "
             "subtype values: academy_action, academy_lifecycle, academy_loop, llm_call, "
             "langgraph_node, langgraph_graph, tool_call. status values: FINISHED, ERROR.\n"
+            "NOTE: llm_call records from LangGraph (e.g. exercise 07) store the prompt in "
+            "`used.messages` and the answer in `generated.text` (NOT `used.user_prompt` / "
+            "`generated.response_text`, which those records leave empty). Prefer "
+            "coalescing when a column may be empty for some rows.\n"
             "Examples:\n"
             "Q: how many rows of each subtype? -> df['subtype'].value_counts()\n"
             "Q: show the langgraph_node rows -> df[df['subtype'] == 'langgraph_node']\n"

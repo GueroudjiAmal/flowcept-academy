@@ -95,29 +95,50 @@ ARGO_MODEL = os.environ.get("ARGO_MODEL", "gpt4o")
 # is not. Any tool-capable chat model works; gpt-4o-mini is a cheap default.
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
+# vLLM: a server WE start, speaking the OpenAI API. On Aurora this is how the
+# examples get a real, tool-capable model with no external network -- vLLM ships in
+# the `frameworks` module and serves weights pre-staged under /flare/datasets. See
+# exercises/aurora/vllm_serve.sh, which sets these three variables for you.
+VLLM_BASE_URL = os.environ.get("VLLM_BASE_URL") or os.environ.get("OPENAI_BASE_URL")
+VLLM_MODEL = os.environ.get("VLLM_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+
+
+def _vllm_base_url() -> str | None:
+    """The vLLM endpoint, re-read from the environment on every call.
+
+    ``vllm_serve.sh`` exports this *after* the process starts in some flows, so we
+    cannot rely on the module-level constant captured at import time.
+    """
+    return os.environ.get("VLLM_BASE_URL") or os.environ.get("OPENAI_BASE_URL")
+
 
 def which_backend() -> str:
     """Which LLM backend make_chat_model() will use.
 
-    Returns ``"argo"``, ``"openai"``, or ``"local"``. Routing is by environment so
-    the *agent code is identical* whichever backend is chosen:
+    Returns ``"argo"``, ``"vllm"``, ``"openai"``, or ``"local"``. Routing is by
+    environment so the *agent code is identical* whichever backend is chosen:
 
-      * ``FLOWCEPT_TUTORIAL_LLM`` (``"argo"``/``"openai"``/``"local"``) forces the
-        backend -- e.g. Aurora compute nodes set ``local`` to stay fully offline;
+      * ``FLOWCEPT_TUTORIAL_LLM`` (``"argo"``/``"vllm"``/``"openai"``/``"local"``)
+        forces the backend;
       * else ``ARGO_USER`` set -> **Argo** (ANL's OpenAI-compatible gateway, native
         tool calling);
+      * else ``VLLM_BASE_URL``/``OPENAI_BASE_URL`` set -> **vLLM**, a server we run
+        ourselves (on Aurora: on the compute node's own GPUs, fully offline).
+        Native tool calling, given the right ``--tool-call-parser``;
       * else ``OPENAI_API_KEY`` set -> **OpenAI** (api.openai.com, native tool
         calling);
       * otherwise -> a small **local** HuggingFace model (no servers/keys, CPU).
 
-    Argo and OpenAI both support tool calls, which the examples that need them
+    Argo, vLLM, and OpenAI all support tool calls, which the examples that need them
     (e.g. 07's tool_calling node) depend on; the local 0.5B model does not.
     """
     forced = os.environ.get("FLOWCEPT_TUTORIAL_LLM", "").strip().lower()
-    if forced in ("local", "argo", "openai"):
+    if forced in ("local", "argo", "openai", "vllm"):
         return forced
     if os.environ.get("ARGO_USER"):
         return "argo"
+    if _vllm_base_url():
+        return "vllm"
     if os.environ.get("OPENAI_API_KEY"):
         return "openai"
     return "local"
@@ -129,7 +150,7 @@ def make_chat_model(
     max_new_tokens: int = 512,
     temperature: float = 0.0,
 ):
-    """Return a LangChain chat model -- Argo, OpenAI, *or* a local HuggingFace model.
+    """Return a LangChain chat model -- Argo, vLLM, OpenAI, *or* a local HuggingFace model.
 
     This is the single LLM construction site for the examples (06/07/08) that
     upstream build with ``ChatOpenAI(...)``. The **same agent code** works with
@@ -138,6 +159,9 @@ def make_chat_model(
       * ``ARGO_USER`` set -> a real ``ChatOpenAI`` pointed at Argo's
         OpenAI-compatible endpoint (``ARGO_BASE_URL``, model ``ARGO_MODEL``).
         Supports ``.bind_tools`` with native tool calling.
+      * else ``VLLM_BASE_URL``/``OPENAI_BASE_URL`` set -> a real ``ChatOpenAI``
+        pointed at our own vLLM server (model ``VLLM_MODEL``). Native tool calling
+        when the server was started with ``--enable-auto-tool-choice``.
       * else ``OPENAI_API_KEY`` set -> a real ``ChatOpenAI`` on api.openai.com
         (model ``OPENAI_MODEL``). Native tool calling.
       * otherwise -> a local ``ChatHuggingFace`` over ``DEFAULT_CHAT_MODEL``
@@ -162,6 +186,34 @@ def make_chat_model(
                 temperature=temperature,
                 # Argo requires the ANL username in the request body.
                 extra_body={"user": argo_user},
+            )
+            _CHAT_MODEL_CACHE[key] = chat
+        return chat
+
+    if backend == "vllm":
+        from langchain_openai import ChatOpenAI
+
+        base_url = _vllm_base_url()
+        if not base_url:
+            raise RuntimeError(
+                "vLLM backend selected but no endpoint: set VLLM_BASE_URL (or "
+                "OPENAI_BASE_URL), e.g. http://localhost:8000/v1. On Aurora, "
+                "`source ../vllm_serve.sh && vllm_start` does this for you."
+            )
+        # The model name must match what `vllm serve` was launched with -- vLLM
+        # rejects a request whose `model` field it is not serving.
+        model = os.environ.get("VLLM_MODEL") or os.environ.get(
+            "OPENAI_MODEL", VLLM_MODEL
+        )
+        key = ("vllm", base_url, model, temperature)
+        chat = _CHAT_MODEL_CACHE.get(key)
+        if chat is None:
+            chat = ChatOpenAI(
+                model=model,
+                base_url=base_url,
+                # vLLM ignores the key but langchain_openai insists on one.
+                api_key=os.environ.get("OPENAI_API_KEY") or "EMPTY",
+                temperature=temperature,
             )
             _CHAT_MODEL_CACHE[key] = chat
         return chat
@@ -210,7 +262,7 @@ def chat(
     """One-shot convenience chat used by the provenance query shell.
 
     Builds (cached) a routed chat model via :func:`make_chat_model` and returns the
-    response *text*. Routing (Argo -> OpenAI -> local HuggingFace) is identical to
+    response *text*. Routing (Argo -> vLLM -> OpenAI -> local HuggingFace) is identical to
     the examples. ``context`` is accepted for backward-compat and ignored -- the query
     shell is a meta-tool that translates questions to pandas, not part of a captured
     workflow, so it emits no provenance of its own.

@@ -4,7 +4,7 @@
 #PBS -A <project>
 #PBS -q debug
 #PBS -l select=1:ncpus=208
-#PBS -l walltime=00:20:00
+#PBS -l walltime=01:00:00
 #PBS -l filesystems=home:flare
 #PBS -N fca-07-mol-design
 #PBS -j oe
@@ -13,14 +13,23 @@ set -euo pipefail
 cd "$PBS_O_WORKDIR"
 source ../env.sh                 # one conda env (rdkit+ase+xtb + agents/LLM) + Flowcept settings
 
-# 07 needs a tool-capable LLM (see ../env.sh): set ARGO_USER, or
-# FLOWCEPT_TUTORIAL_MODEL to a tool-capable local model, before submitting.
+# 07's LangGraph tool_calling node NEEDS a model that emits real tool calls, so
+# unlike 06/08 this is not optional: the CPU 0.5B fallback would retry forever.
+# vllm_start serves Qwen2.5-7B with --enable-auto-tool-choice on this node's GPUs.
+# (If you do have Argo reachability, `export ARGO_USER=... FLOWCEPT_USE_VLLM=0`.)
+if [[ "${FLOWCEPT_USE_VLLM:-1}" == 1 ]]; then
+    source ../vllm_serve.sh
+    vllm_start
+elif [[ -z "${ARGO_USER:-}" ]]; then
+    echo "!! 07 needs tool calling: either leave FLOWCEPT_USE_VLLM=1 or set ARGO_USER."
+    exit 1
+fi
 
 # If `conda activate` didn't take in this non-interactive job, run via conda:
 if python -c "import xtb" 2>/dev/null; then
     python solution.py           # (use exercise.py to work through the steps)
 else
-    conda run --no-capture-output -n flowcept-academy python solution.py
+    conda run --no-capture-output -p "$FLOWCEPT_ENV_PREFIX" python solution.py
 fi
 
 echo "provenance -> $PBS_O_WORKDIR/runs/07-mol-design_<date-time>/  (buffer, perf CSV, 07-mol-design_card.md)"

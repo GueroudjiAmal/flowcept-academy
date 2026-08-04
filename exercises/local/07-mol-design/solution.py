@@ -19,9 +19,9 @@ Provenance is collected by the Flowcept agentic plugins:
     -- with zero edits to the vendored agent.
 
 LLM: ``make_chat_model()`` routes (in priority order) to Argo (real OpenAI-compatible
-endpoint, native tool calling) when ``ARGO_USER`` is set, else OpenAI when
-``OPENAI_API_KEY`` is set, else a local HuggingFace model -- the SAME agent code every
-way. 07's ``tool_calling`` node has an unbounded retry that waits for a parseable tool
+endpoint, native tool calling) when ``ARGO_USER`` is set, else vLLM when
+``VLLM_BASE_URL`` is set, else OpenAI when ``OPENAI_API_KEY`` is set, else a local
+HuggingFace model -- the SAME agent code every way. 07's ``tool_calling`` node has an unbounded retry that waits for a parseable tool
 call, so run this with a tool-capable backend (``ARGO_USER=... python solution.py`` or
 ``OPENAI_API_KEY=... python solution.py``). The default local 0.5B model does not emit
 tool calls and will not terminate that node.
@@ -43,6 +43,7 @@ Upstream: academy-agents/academy  examples/07-mol-design/{mol_design_agents.py,r
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 
 from academy.exchange import LocalExchangeFactory
@@ -62,7 +63,13 @@ SEEDS = ['CNC(N)=O']
 # Harness knob (not agent logic): upstream polls forever (`while True: sleep 30`).
 # We poll a bounded number of times, then exit the Manager context -- which shuts
 # the agents down and terminates each campaign graph via its shutdown event.
-MAX_POLLS = 2
+#
+# Why several polls (not 1-2): each campaign round can propose SMILES the model
+# writes in chemistry shorthand (e.g. `CNC(NO2)=O`), which RDKit rejects. The
+# upstream graph is *designed* to recover -- the conclude/critique/update nodes
+# feed the parse failures back to the LLM, which fixes the SMILES next round. We
+# give it that room, and stop early (see run()) the moment real energies appear.
+MAX_POLLS = 6
 POLL_SECONDS = 45
 
 
@@ -88,13 +95,19 @@ async def run() -> list:
             reports: list = []
             for _ in range(MAX_POLLS):
                 await asyncio.sleep(POLL_SECONDS)
+                per_agent: list = []
                 for i, agent in enumerate(agents):
                     report = await agent.report()
+                    per_agent.append(report)
                     reports = report
                     print(f'Progress report from agent {i}')
                     print(f'Number of molecules simulated: {len(report)}')
                     print(f'Five best molecules: {report[:5]}')
                 print('=' * 80)
+                # Stop early once the campaign has produced real xTB energies --
+                # no need to keep polling once every seed has simulated molecules.
+                if all(len(r) > 0 for r in per_agent):
+                    break
             # Leaving the context shuts agents down -> each @loop's shutdown event
             # is set -> should_continue returns END -> the campaign graph finishes.
             return reports
@@ -102,6 +115,12 @@ async def run() -> list:
 
 def main() -> None:
     quiet_logging()
+    # Presentation only (not agent logic): when the LLM proposes an invalid SMILES,
+    # the vendored campaign's fire-and-forget tool tasks surface asyncio's
+    # "Task exception was never retrieved" ERROR with a full traceback. The parse
+    # failure is already shown as a one-line RDKit "SMILES Parse Error", so silence
+    # asyncio's redundant traceback to keep the tutorial output readable.
+    logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
     with capture_run("07-mol-design") as run_dir:
         # STEP 1 -- capture provenance (Academy plugin + LangGraph callback)

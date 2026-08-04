@@ -4,7 +4,7 @@
 #PBS -A <project>
 #PBS -q debug
 #PBS -l select=1:ncpus=208
-#PBS -l walltime=00:20:00
+#PBS -l walltime=00:45:00
 #PBS -l filesystems=home:flare
 #PBS -N fca-06-llm
 #PBS -j oe
@@ -12,6 +12,14 @@
 set -euo pipefail
 cd "$PBS_O_WORKDIR"
 source ../env.sh                 # modules + conda env + offline LLM + Flowcept settings
+
+# Serve a real model on this node's GPUs (no Argo / no api.openai.com needed).
+# Set FLOWCEPT_USE_VLLM=0 to fall back to the CPU 0.5B model instead -- much faster
+# to start, much worse answers. Walltime above allows for vLLM startup (~2-5 min).
+if [[ "${FLOWCEPT_USE_VLLM:-1}" == 1 ]]; then
+    source ../vllm_serve.sh
+    vllm_start
+fi
 
 python solution.py               # (use exercise.py to work through the steps)
 

@@ -11,8 +11,8 @@ Academy program that runs but records nothing, and you turn provenance on one
 
 **Terminal-only**: every analysis is text (summaries, lineage trees, ASCII
 dashboards, a markdown provenance card) — no images, no GUI — so it runs unchanged
-over SSH on an **Aurora** compute node. CPU-friendly; LLM via **Argo → OpenAI →
-local CPU model** (no mock).
+over SSH on an **Aurora** compute node. CPU-friendly; LLM via **Argo → vLLM →
+OpenAI → local CPU model** (no mock).
 
 ---
 
@@ -30,7 +30,7 @@ conda activate flowcept-academy
 
 All 01–08 run in this single env. **Example 07** additionally needs a tool-capable
 LLM (its `tool_calling` node retries until it gets a parseable tool call); the
-default local 0.5B model doesn't emit tool calls, so run 07 with Argo or OpenAI
+default local 0.5B model doesn't emit tool calls, so run 07 with Argo, vLLM, or OpenAI
 (or a tool-capable local model — see its README):
 
 ```bash
@@ -52,6 +52,10 @@ exercises/
 Each example folder has `agent_src.py` (the upstream Academy agent code, vendored
 **unchanged**), `exercise.py` (uncomment-and-run STEP blocks), `solution.py` (every
 step enabled), and a `README.md`.
+
+For what each example does, **what its provenance reveals**, and questions to ask the
+query tool — plus a step-by-step **Running on Aurora** flow — see
+[`WALKTHROUGHS.md`](WALKTHROUGHS.md).
 
 ```bash
 cd exercises/local/01-actor-client
@@ -77,7 +81,7 @@ agent runs an LLM reasoning campaign (a LangGraph `StateGraph` inside an Academy
 relaxations (rdkit + ASE + xtb) — **nothing is mocked**. It runs in the same
 `flowcept-academy` conda env as the rest; the only extra requirement is a
 tool-capable LLM (its `tool_calling` node retries until it gets a parseable tool
-call — Argo or OpenAI, or a tool-capable local model). See
+call — Argo, vLLM, or OpenAI, or a tool-capable local model). See
 [`exercises/local/07-mol-design/README.md`](exercises/local/07-mol-design/README.md).
 
 ## The steps (every example)
@@ -106,21 +110,22 @@ with captured(workflow_name="03-agent-agent"):
     result = asyncio.run(run())      # the stock example, now captured
 ```
 
-## LLM backend: Argo → OpenAI → local CPU
+## LLM backend: Argo → vLLM → OpenAI → local CPU
 
 Checked in priority order (first match wins):
 
 | Condition | Backend |
 |---|---|
 | `ARGO_USER` set | ANL **Argo** gateway (Aurora / ANL network), native tool calling |
+| else `VLLM_BASE_URL` / `OPENAI_BASE_URL` set | **vLLM** server we run (model `VLLM_MODEL`); native tool calling when started with `--enable-auto-tool-choice`. On Aurora, `source ../vllm_serve.sh && vllm_start` sets this up |
 | else `OPENAI_API_KEY` set | **OpenAI** (`api.openai.com`, model `OPENAI_MODEL`, default `gpt-4o-mini`), native tool calling |
 | else | **local CPU** model (`Qwen/Qwen2.5-0.5B-Instruct`, needs `transformers`+`torch`) |
 
 The chain falls back automatically. There is **no mock backend** — every response
 comes from a real model; if none is usable, `chat()` raises instead of fabricating
-text. Force with `FLOWCEPT_TUTORIAL_LLM=argo|openai|local`; pick the local model
+text. Force with `FLOWCEPT_TUTORIAL_LLM=argo|vllm|openai|local`; pick the local model
 with `FLOWCEPT_TUTORIAL_MODEL=...`. Examples that need tool calls (e.g. 07) work on
-Argo or OpenAI; the local 0.5B model does not emit tool calls.
+Argo, vLLM, or OpenAI; the local 0.5B model does not emit tool calls.
 
 ---
 
@@ -174,7 +179,7 @@ flowcept-academy/
 ├── flowcept_academy/   # the reusable library
 │   ├── capture.py      # captured() + langgraph_capture(): turn provenance on
 │   ├── provenance.py   # load / summarize / lineage / tailored / card / text dashboard
-│   └── util.py         # run() helper + make_chat_model()/chat() (Argo -> OpenAI -> local, no mock)
+│   └── util.py         # run() helper + make_chat_model()/chat() (Argo -> vLLM -> OpenAI -> local, no mock)
 ├── provenance/
 │   ├── analyze.py      # inspect any buffer / dir (+ --all), terminal-only
 │   ├── query.py        # interactive shell + ask("...") NL queries
@@ -186,8 +191,11 @@ flowcept-academy/
 ## Slides & Aurora
 
 - Slides: `cd slides && make` → `flowcept_academy.pdf`.
-- Aurora: see [`exercises/aurora/README.md`](exercises/aurora/README.md) — offline
-  local CPU model (or `ARGO_USER`), provenance offline, per-example `submit.pbs`.
+- Aurora: see [`exercises/aurora/README.md`](exercises/aurora/README.md) — per-example
+  `submit.pbs`, one shared `env.sh`, provenance offline; the LLM examples (06/07/08)
+  serve a tool-capable **vLLM** model on the node's own GPUs (01–05 need no LLM). A
+  step-by-step Aurora run is in
+  [`WALKTHROUGHS.md`](WALKTHROUGHS.md#running-these-on-aurora).
 
 Built for ATPESC. Flowcept (ORNL); Academy (Globus Labs / ANL). Example 07 runs
 real GFN2-xTB chemistry (rdkit + ASE + xtb).

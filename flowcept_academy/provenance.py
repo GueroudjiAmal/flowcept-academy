@@ -454,6 +454,46 @@ def _clip(v: Any, n: int = 70) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+def _llm_prompt(used: dict[str, Any]) -> Any:
+    """The user/human prompt of an ``llm_call``, across both record schemas.
+
+    The Academy plugin (06/08) stores ``used.user_prompt``; the LangGraph callback
+    (07) stores ``used.messages`` -- a nested list of role/content strings. Fall
+    back to the last human-side content found in that message list.
+    """
+    p = used.get("user_prompt")
+    if p:
+        return p
+    msgs = used.get("messages")
+    if msgs:
+        flat: list[str] = []
+
+        def _walk(x: Any) -> None:
+            if isinstance(x, str):
+                flat.append(x)
+            elif isinstance(x, dict):
+                c = x.get("content")
+                if isinstance(c, str):
+                    flat.append(c)
+            elif isinstance(x, (list, tuple)):
+                for y in x:
+                    _walk(y)
+
+        _walk(msgs)
+        if flat:
+            return flat[-1]
+    return None
+
+
+def _llm_answer(gen: dict[str, Any]) -> Any:
+    """The response text of an ``llm_call``, across both record schemas.
+
+    Academy plugin (06/08): ``generated.response_text``; LangGraph callback (07):
+    ``generated.text``.
+    """
+    return gen.get("response_text") or gen.get("text")
+
+
 def print_tailored(records: list[dict[str, Any]]) -> list[str]:
     """Print the analysis relevant to whatever this example captured.
 
@@ -562,14 +602,19 @@ def print_tailored(records: list[dict[str, Any]]) -> list[str]:
         for t in llms:
             u = t.get("used") or {}
             g = t.get("generated") or {}
-            ctype = u.get("call_type") or t.get("activity_id")
-            agent = u.get("agent_class") or (u.get("ctx_agent"))
-            parent = act_of(t.get("parent_task_id"))
-            model = u.get("model_used") or u.get("model")
+            cm = t.get("custom_metadata") or {}
+            # Fields differ by capture source: the Academy plugin (06/08) records
+            # call_type/agent_class; the LangGraph callback (07) records neither, so
+            # fall back to the model as the "actor" and the graph node as the parent.
+            model = u.get("model_used") or u.get("model") or g.get("model") or cm.get("model")
+            ctype = u.get("call_type") or "invoke"
+            agent = (u.get("agent_class") or u.get("ctx_agent")
+                     or cm.get("agent_type") or model or "?")
+            parent = act_of(t.get("parent_task_id")) or t.get("activity_id")
             print(f"    {ctype:<10} [{agent}]  tokens={g.get('total_tokens')} "
                   f"model={model}  parent={parent}")
-            print(f"        prompt : {_clip(u.get('user_prompt'), 80)}")
-            print(f"        answer : {_clip(g.get('response_text'), 80)}")
+            print(f"        prompt : {_clip(_llm_prompt(u), 80)}")
+            print(f"        answer : {_clip(_llm_answer(g), 80)}")
 
     # --- multi-agent conversation (08: several 'respond' llm calls) ----------
     responds = [t for t in llms if (t.get("used") or {}).get("call_type") == "respond"]
@@ -580,7 +625,7 @@ def print_tailored(records: list[dict[str, Any]]) -> list[str]:
             u = t.get("used") or {}
             g = t.get("generated") or {}
             print(f"    turn {i}  {u.get('ctx_agent') or u.get('agent_class')}: "
-                  f"{_clip(g.get('response_text'), 80)}")
+                  f"{_clip(_llm_answer(g), 80)}")
 
     print("-" * 64)
     return emitted

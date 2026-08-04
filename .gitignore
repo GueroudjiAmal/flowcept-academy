@@ -5,6 +5,8 @@ build/
 dist/
 venv/
 .venv/
+# conda env when FLOWCEPT_ENV_PREFIX is unset and it falls back into the repo
+envs/
 
 # Captured provenance artifacts (land in each exercise dir when it is run)
 flowcept_buffer*.jsonl
@@ -12,6 +14,7 @@ flowcept_buffer*.jsonl
 provenance_perf_*.csv
 langgraph_provenance_perf_*.csv
 runs/
+vllm_server.log
 flowcept_lmdb/
 runinfo/
 .ipynb_checkpoints/

@@ -13,6 +13,57 @@ python ../../../provenance/query.py runs/<id>_* --ask "..."
 ```
 
 
+## Running these on Aurora
+
+The per-example sections below are **identical on Aurora** — the science, the
+provenance graph, and the `ask(...)` questions do not change. What changes is *how you
+launch*: a compute-node batch job instead of a local process, and (for the LLM
+examples) a GPU-served **vLLM** model instead of the local CPU one. Full operational
+detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix — is in
+[`exercises/aurora/README.md`](exercises/aurora/README.md). The short version:
+
+1. **One-time, on a login node** (login nodes have internet; compute nodes do not):
+
+   ```bash
+   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/$USER/envs/flowcept-academy
+   export HF_HOME=/lus/flare/projects/<project>/$USER/hf_cache   # add both to ~/.bashrc
+   bash setup/install.sh aurora
+   source exercises/aurora/env.sh
+   python -c "from flowcept_academy.util import chat; print(chat('hi'))"   # pre-cache the CPU model
+   ```
+
+   For the LLM examples (06/07/08) also populate vLLM's modelinfo cache once — see
+   *"One-time: populate vLLM's modelinfo cache"* in the Aurora README.
+
+2. **Submit an example** (edit `-A <project>` in its `submit.pbs` first):
+
+   ```bash
+   cd exercises/aurora/01-actor-client && qsub submit.pbs
+   ```
+
+   The job sources `env.sh`, runs `solution.py`, and writes `runs/<id>_<date-time>/`.
+   Backend need per example:
+   - **01–05** — no LLM (03/05 just offload compute); run on the CPU env as-is.
+   - **06, 08** — `submit.pbs` starts vLLM on the node's GPUs by default; set
+     `FLOWCEPT_USE_VLLM=0` to fall back to the CPU 0.5B model (faster to start, weaker
+     answers, no tool calls).
+   - **07** — **requires** tool calling: keep the default vLLM, or
+     `export ARGO_USER=... FLOWCEPT_USE_VLLM=0` if the node reaches Argo. On the plain
+     CPU model its `tool_calling` node would retry forever.
+
+3. **Query the result** — same tool as local, from the example folder:
+
+   ```bash
+   python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
+   ```
+
+To work through `exercise.py` STEP by STEP interactively, grab a node
+(`qsub -I -A <project> -q debug -l select=1 -l walltime=00:30:00 -l filesystems=home:flare`),
+`source ../env.sh`, and — for 06/07/08 — `source ../vllm_serve.sh && vllm_start`
+before running. Everything below then applies verbatim; just read `runs/<id>_*` from
+the compute-node run.
+
+
 ## 01-actor-client  —  agent lifecycle + actions
 
 What it does: launches one stateful `Counter` agent and, from a client, calls its
@@ -119,7 +170,7 @@ What the provenance reveals:
 What it does: an `Orchestrator` builds a LangChain ReACT agent (`create_agent`)
 over a tool that messages a separate `MySimAgent`; the LLM decides whether to call
 the tool to get a simulated energy, then writes the answer. (LLM = Argo →
-OpenAI → local CPU model, in priority order.)
+vLLM → OpenAI → local CPU model, in priority order.)
 
 What the provenance reveals:
   - `llm_call` tasks linked to their enclosing `@action` (`answer`) via

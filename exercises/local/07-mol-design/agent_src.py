@@ -11,13 +11,14 @@ runs an actual xTB relaxation and returns a real energy difference.
 The ONLY sanctioned change vs upstream is the LLM construction site: upstream builds
 ``ChatOpenAI(model=...)`` twice (lines 140-141); here both call ``make_chat_model()``,
 which routes (in priority order) to Argo (real OpenAI-compatible endpoint, native
-tool calling) when ``ARGO_USER`` is set, else OpenAI when ``OPENAI_API_KEY`` is set,
-else a local HuggingFace model -- the SAME agent code every way. The reasoning graph,
+tool calling) when ``ARGO_USER`` is set, else vLLM when ``VLLM_BASE_URL`` is set,
+else OpenAI when ``OPENAI_API_KEY`` is set, else a local HuggingFace model -- the
+SAME agent code every way. The reasoning graph,
 the xTB chemistry, and the tool-calling loop are byte-for-byte upstream.
 
 NOTE: 07's ``tool_calling`` node has an *unbounded* retry that spins until the model
 emits a parseable tool call. That needs a tool-capable LLM -- run this with
-``ARGO_USER`` or ``OPENAI_API_KEY`` set (or a tool-capable local model). The default
+``ARGO_USER``, ``VLLM_BASE_URL``, or ``OPENAI_API_KEY`` set (or a tool-capable local model). The default
 local 0.5B model does not emit tool calls and will not terminate that loop.
 
 Requires the flowcept-academy conda env (setup/environment.yml): includes rdkit + ase + xtb.
@@ -164,7 +165,7 @@ class XTBSimulationAgent(Agent):
         tools = [tool(self.compute_ionization_energy)]
         # UPSTREAM: self.reasoning_llm  = ChatOpenAI(model=self.reasoning_model)
         #           self.generation_llm = ChatOpenAI(model=self.generation_model)
-        # Routed swap (Argo -> OpenAI -> local HF); same agent code every way.
+        # Routed swap (Argo -> vLLM -> OpenAI -> local HF); same agent code every way.
         self.reasoning_llm = make_chat_model()
         self.generation_llm = make_chat_model()
         self.tools_by_name = {tool.name: tool for tool in tools}

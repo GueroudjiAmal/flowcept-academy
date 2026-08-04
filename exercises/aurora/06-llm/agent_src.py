@@ -8,10 +8,14 @@ solution.py / exercise.py so the Flowcept plugins wrap this code without editing
 
 The ONE sanctioned change vs upstream: the LLM construction site. Upstream builds
 ``ChatOpenAI(model=..., api_key=..., base_url=...)`` (an OpenAI-compatible server);
-here we build a **local** HuggingFace chat model via ``make_chat_model()`` so the
-example runs offline on CPU with no servers or API keys. The agent logic --
-``MySimAgent``, ``make_sim_tool``, the ReACT loop via ``create_agent`` -- is
-byte-for-byte upstream.
+here we build the model via ``make_chat_model()``, which routes (in priority order)
+to Argo when ``ARGO_USER`` is set, else vLLM when ``VLLM_BASE_URL`` is set, else
+OpenAI when ``OPENAI_API_KEY`` is set, else a **local** HuggingFace CPU model -- the
+same agent code every way (no servers or keys required for the local path). A
+tool-capable backend (Argo/vLLM/OpenAI) exercises
+the full ReACT tool call; the local 0.5B model answers directly without a tool
+call. The agent logic -- ``MySimAgent``, ``make_sim_tool``, the ReACT loop via
+``create_agent`` -- is byte-for-byte upstream.
 """
 from __future__ import annotations
 

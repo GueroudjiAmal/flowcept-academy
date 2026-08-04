@@ -9,7 +9,7 @@ python provenance/query.py exercises/local/06-llm/   # shell: df, records, prov,
 python provenance/query.py <buffer> --ask "which tasks failed and why?"
 ```
 (Run an exercise's `solution.py` first so its `flowcept_buffer.jsonl` exists.)
-`ask()` turns natural language into pandas via the LLM (Argo → OpenAI → local).
+`ask()` turns natural language into pandas via the LLM (Argo → vLLM → OpenAI → local).
 Flowcept's own
 NL agent: `flowcept --start-agent`.
 

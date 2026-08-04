@@ -22,20 +22,28 @@ What the provenance reveals (one graph, three layers, one `campaign_id`):
     real LLM-proposed molecule; a molecule xTB can't parse is recorded with
     `status=ERROR` + `stderr` (a real captured failure).
 
+> **Expect the first poll(s) to show "0 molecules".** This is a real, non-deterministic
+> agentic campaign: the LLM sometimes proposes chemically-sensible but SMILES-invalid
+> strings (e.g. `CF3C(N)=O`, where `CF3` is shorthand RDKit rejects). The upstream graph
+> is *designed* to recover — its `conclude`/`critique`/`update` nodes feed the parse
+> failures back to the model, which fixes the SMILES a round or two later. The harness
+> therefore polls several times and stops as soon as real energies appear, so the run
+> length varies from one launch to the next.
+
 ## Requirements (07 is special)
 
 07 runs in the **same `flowcept-academy` conda env** as every other exercise (that
 env already includes the real xTB stack — rdkit + ase + xtb). The one extra
 requirement is a **tool-capable LLM**: its `tool_calling` node retries until it
 gets a parseable tool call, and the default local 0.5B model does not emit tool
-calls and will not terminate that node. Use Argo or OpenAI, or a tool-capable
+calls and will not terminate that node. Use Argo, vLLM, or OpenAI, or a tool-capable
 local model via `FLOWCEPT_TUTORIAL_MODEL`.
 
 ```bash
 # once, from the repo root (builds the shared env used by all 8 exercises):
 bash setup/install.sh                                 # -> conda env `flowcept-academy`
 conda activate flowcept-academy
-# then, from this folder, with a tool-capable backend (e.g. Argo or OpenAI):
+# then, from this folder, with a tool-capable backend (e.g. Argo, vLLM, or OpenAI):
 ARGO_USER=<your_anl_username> python solution.py
 ```
 

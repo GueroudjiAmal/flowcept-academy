@@ -12,7 +12,9 @@ Provenance is collected by the Flowcept agentic plugins:
   - ``langgraph_capture()`` attaches the Flowcept LangGraph callback so the
     ReACT loop's LLM calls / tool calls are captured too.
 
-No servers: the LLM is a local HuggingFace model (see agent_src.make_chat_model).
+LLM backend routes via ``make_chat_model()``: Argo (``ARGO_USER``) → vLLM
+(``VLLM_BASE_URL``) → OpenAI (``OPENAI_API_KEY``) → local HuggingFace CPU model, in priority order. No servers
+or keys are required for the local path (see agent_src.make_chat_model).
 
     python solution.py
 
@@ -49,7 +51,7 @@ async def run() -> str:
                 Orchestrator,
                 kwargs={
                     # model/access_token/base_url are upstream constructor args; the
-                    # local HF model ignores them (see agent_src.make_chat_model).
+                    # routed backend ignores them (see agent_src.make_chat_model).
                     'model': 'local',
                     'access_token': 'none',
                     'simulators': [simulator],

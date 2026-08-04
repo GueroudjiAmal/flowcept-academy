@@ -32,7 +32,7 @@
   backgroundcolor=\color{fccode},breaklines=true}
 
 \title{Capturing Provenance of Academy Examples with Flowcept}
-\subtitle{A 1-hour, hands-on tutorial --- CPU-friendly, Argo/OpenAI/local LLM}
+\subtitle{A 1-hour, hands-on tutorial --- CPU-friendly, Argo/vLLM/OpenAI/local LLM}
 \author{Amal Gueroudji}
 \date{ATPESC}
 \institute{Argonne National Laboratory}
@@ -271,9 +271,12 @@ python ../../../provenance/query.py runs/03-agent-agent_* --ask "show the cross-
 % =====================================================================
 \section{Part 3 --- Advanced: agents \& LLMs}
 
-\begin{frame}{LLM backend: Argo $\to$ OpenAI $\to$ local CPU model}
+\begin{frame}{LLM backend: Argo $\to$ vLLM $\to$ OpenAI $\to$ local CPU model}
   \begin{itemize}
     \item \texttt{ARGO\_USER} set $\to$ \alert{ANL Argo gateway} (on Aurora / ANL network), native tool calling
+    \item else \texttt{VLLM\_BASE\_URL}/\texttt{OPENAI\_BASE\_URL} set $\to$ \alert{vLLM}
+      server we run (\texttt{VLLM\_MODEL}); native tool calling when launched with
+      \texttt{--enable-auto-tool-choice} (on Aurora: \texttt{source ../vllm\_serve.sh \&\& vllm\_start})
     \item else \texttt{OPENAI\_API\_KEY} set $\to$ \alert{OpenAI}
       (\texttt{api.openai.com}, \texttt{OPENAI\_MODEL}, default \texttt{gpt-4o-mini}), native tool calling
     \item else $\to$ \alert{local CPU model}
@@ -282,7 +285,7 @@ python ../../../provenance/query.py runs/03-agent-agent_* --ask "show the cross-
       raises rather than fabricate text
   \end{itemize}
   \small Checked in priority order, first match wins; force with
-  \texttt{FLOWCEPT\_TUTORIAL\_LLM=argo|openai|local}. Every call is recorded as an
+  \texttt{FLOWCEPT\_TUTORIAL\_LLM=argo|vllm|openai|local}. Every call is recorded as an
   \texttt{llm\_call} (model, prompt, response, tokens), linked to its action.
 \end{frame}
 
@@ -302,8 +305,8 @@ result = await agent.ainvoke({"messages": [("user", question)]})
       \texttt{RoundRobinGroupChatManager} with a supervisor \texttt{@loop};
       per-turn \texttt{llm\_call}s, tokens per agent, bounded by \texttt{max\_rounds}
   \end{itemize}
-  \small The LLM is injected via \texttt{make\_chat\_model()} (Argo $\to$ OpenAI $\to$
-  local) exactly where upstream builds \texttt{ChatOpenAI} --- \alert{zero other agent-code changes}.
+  \small The LLM is injected via \texttt{make\_chat\_model()} (Argo $\to$ vLLM $\to$ OpenAI
+  $\to$ local) exactly where upstream builds \texttt{ChatOpenAI} --- \alert{zero other agent-code changes}.
 \end{frame}
 
 \begin{frame}[fragile]{What gets captured --- a real \texttt{06-llm} run}
@@ -411,7 +414,7 @@ cd exercises/aurora/06-llm && qsub submit.pbs   # -> runs/06-llm_<date-time>/
       example --- zero agent-code changes.
     \item \textbf{Examples:} actor, loop, cross-agent, multi-process, Parsl, LLM
       agents, and cross-framework LangGraph + real xTB (07).
-    \item \textbf{LLM:} Argo $\to$ OpenAI $\to$ local CPU model.
+    \item \textbf{LLM:} Argo $\to$ vLLM $\to$ OpenAI $\to$ local CPU model.
     \item \textbf{Inspect:} tailored analysis, text dashboards, provenance cards
       --- all terminal, including \alert{failures} (status=ERROR + stderr).
     \item \textbf{Outputs:} every run in its own \texttt{runs/<id>\_<date-time>/}.
