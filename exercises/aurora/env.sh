@@ -3,8 +3,9 @@
 #
 # ONE conda env for the whole tutorial -- built once on a login node by
 #   bash setup/install.sh aurora
-# Sets up: ALCF frameworks module, the conda env, an OFFLINE local CPU LLM (no Argo
-# needed on compute nodes), and Flowcept's offline settings.
+# Sets up: ALCF frameworks module, the conda env, the OFFLINE vLLM backend (the only
+# LLM on Aurora -- served on the node's GPUs by vllm_start), and Flowcept's offline
+# settings. There is no local/CPU LLM here; that is the exercises/local/ path.
 #
 # Per the ALCF Python-on-Aurora docs the env lives at an explicit --prefix, not a
 # name. Export the SAME FLOWCEPT_ENV_PREFIX you used at install time (put it in your
@@ -71,7 +72,15 @@ export HF_HOME="${HF_HOME:-/flare/datasets/model-weights}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export FLOWCEPT_TUTORIAL_MODEL="${FLOWCEPT_TUTORIAL_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
-export FLOWCEPT_TUTORIAL_LLM="${FLOWCEPT_TUTORIAL_LLM:-vllm}"
+# There is no local/CPU backend on Aurora, so force vLLM unless the user deliberately
+# picked another *remote* backend (the Argo escape hatch). An unset value -- or a stale
+# `local` left over in the shell/~/.bashrc from a laptop session -- becomes `vllm`;
+# only an explicit argo/openai/vllm is honored. (`${VAR:-vllm}` alone would let a
+# leftover `local` win and then crash, since local needs a torch we don't use here.)
+case "${FLOWCEPT_TUTORIAL_LLM:-}" in
+    argo|openai|vllm) : ;;                       # keep a deliberate remote backend
+    *) export FLOWCEPT_TUTORIAL_LLM=vllm ;;      # unset / local / anything else -> vLLM
+esac
 
 # --- Flowcept: offline (no Redis/Mongo); records -> flowcept_buffer.jsonl --
 export FLOWCEPT_SETTINGS_PATH="$REPO/setup/flowcept_settings.yaml"

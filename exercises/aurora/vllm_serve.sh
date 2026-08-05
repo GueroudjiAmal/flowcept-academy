@@ -55,7 +55,10 @@ _VLLM_LOG=""
 
 vllm_start() {
     command -v vllm >/dev/null || {
-        echo "!! vllm not found -- is the ALCF frameworks module loaded? (source ../env.sh)"
+        echo "!! vllm not found. vLLM ships in the ALCF 'frameworks' module and needs the"
+        echo "!! GPUs, so this only works on an AURORA COMPUTE NODE (qsub -I ... or inside"
+        echo "!! a batch job), after 'source ../env.sh' loads the module. On a login node or"
+        echo "!! laptop there is no vllm -- use the exercises/local/ CPU path there instead."
         return 1
     }
 
