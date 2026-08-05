@@ -30,7 +30,12 @@ export VLLM_MODEL="${VLLM_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
 export VLLM_TOOL_PARSER="${VLLM_TOOL_PARSER:-llama3_json}"
 export VLLM_PORT="${VLLM_PORT:-8000}"
 export VLLM_TP="${VLLM_TP:-1}"              # tiles; 1 is enough under ~20B
-export VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-8192}"
+# Llama-3.1-8B natively supports 131072 tokens; 8192 was too tight -- exercise 08's
+# group chat accumulates the whole discussion, and the `supervize` loop overflowed a
+# 8192-token context (8195 input tokens -> HTTP 400 "maximum context length is 8192").
+# 32768 gives the multi-agent transcript ample room; the extra KV cache (~a few GB on
+# one tile) is well within a 64GB device. Raise further (up to 131072) for longer chats.
+export VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-32768}"
 export VLLM_STARTUP_TIMEOUT="${VLLM_STARTUP_TIMEOUT:-900}"   # seconds
 
 # --- Weights: ALCF's pre-staged hub, read-only, no download ------------------
