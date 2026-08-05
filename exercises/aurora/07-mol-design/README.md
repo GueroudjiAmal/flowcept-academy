@@ -81,3 +81,30 @@ python ../../../provenance/query.py runs/07-mol-design_* --ask "which tasks have
 ```
 
 > Runs in the shared `flowcept-academy` conda env (which includes rdkit + ase + xtb).
+
+## Why it matters (the value of provenance)
+
+`provenance_value.py` is a runnable answer to *"what did capturing all this buy
+me?"* It takes a buffer (a run of yours, or the shipped sample) and asks six
+questions the campaign's normal output **cannot** answer -- printing, for each, the
+plain-English question, the exact pandas, the answer, and what you'd be blind to
+without provenance:
+
+1. **Cross-framework lineage** -- Academy `@loop` + LangGraph nodes + LLM/tool calls
+   as ONE graph under a single `campaign_id` (three libraries, zero glue).
+2. **The hidden failure rate** -- the invalid SMILES the LLM invented (in the sample,
+   8 of 10 tool calls) that the ranked-list output silently drops.
+3. **Black box vs. reality** -- molecules *attempted* vs. what the report surfaced.
+4. **The reasoning trace** -- the propose → fail → recover sequence, in time order.
+5. **Fully-attributed results** -- each real xTB energy tied to the model + campaign.
+6. **Cost & compute accounting** -- LLM tokens per usable result, xTB wall-clock on
+   real relaxations vs. wasted on parse failures.
+
+```bash
+python provenance_value.py                     # the shipped sample (always works)
+python provenance_value.py runs/07-mol-design_*   # your own run
+```
+
+It is plain pandas (no LLM needed), so it runs anywhere the buffer does. The
+`(natural language: ...)` line under each question is the same query you can hand to
+`query.py --ask "..."`.

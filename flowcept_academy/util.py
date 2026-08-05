@@ -217,6 +217,28 @@ def make_chat_model(
         key = ("vllm", base_url, model, temperature)
         chat = _CHAT_MODEL_CACHE.get(key)
         if chat is None:
+            # Preflight ONCE (construction is offline; the real failure is a dead
+            # server). Without this, an endpoint that is set but not answering --
+            # vLLM never started in THIS shell, or it died/was in a job that ended
+            # -- surfaces as a ~120-line httpcore/openai APIConnectionError deep
+            # inside the agent. Turn that into one actionable line, here at the source.
+            import urllib.error
+            import urllib.request
+
+            try:
+                urllib.request.urlopen(  # noqa: S310 (localhost, our own server)
+                    base_url.rstrip("/") + "/models", timeout=5
+                )
+            except (urllib.error.URLError, OSError) as e:
+                raise RuntimeError(
+                    f"vLLM endpoint {base_url} is set but not answering ({e}). "
+                    "The server isn't running in THIS shell. On an Aurora compute "
+                    "node, start (or adopt) it here BEFORE running:\n"
+                    "    source ../vllm_serve.sh && vllm_start\n"
+                    "then confirm:  curl -s $VLLM_BASE_URL/models   (should list the "
+                    "model).\nIf vllm_start prints 'vLLM died during startup', read "
+                    "./vllm_server.log for why."
+                ) from e
             chat = ChatOpenAI(
                 model=model,
                 base_url=base_url,
