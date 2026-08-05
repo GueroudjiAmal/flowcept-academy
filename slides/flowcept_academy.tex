@@ -397,20 +397,46 @@ class SimulationAgent(Agent):
 \begin{lstlisting}[style=sh]
 # once, on a login node. Env lives in project space. No model download.
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
-bash setup/install.sh aurora     # CLONES the frameworks base + delta (no LLM download)
-source exercises/aurora/env.sh   # frameworks; conda activate; HF offline; settings
+bash setup/install.sh aurora     # clones the frameworks base + delta (no LLM download)
+source exercises/aurora/env.sh   # frameworks; conda activate --stack; HF offline
 
-# then just submit -- no editing needed
+# then just submit -- no editing needed (submit.pbs brings vLLM up on the node)
 cd exercises/aurora/06-llm && qsub submit.pbs   # -> runs/06-llm_<date-time>/
 \end{lstlisting}
-  \small \texttt{install.sh aurora} clones the ALCF \texttt{frameworks} base env
-  (so \texttt{xtb-python} for 07 installs); nothing is downloaded. All LLM usage reads
-  ALCF's staged hub at \texttt{/flare/datasets/model-weights} --- \texttt{env.sh} points
-  \texttt{HF\_HOME} there and sets \texttt{HF\_HUB\_OFFLINE=1}, so compute nodes need no
-  network. \textbf{06/07/08} serve \texttt{Llama-3.1-8B-Instruct} on the node's own GPUs
-  via vLLM (\texttt{FLOWCEPT\_USE\_VLLM=0} falls back to the same weights on CPU for
-  06/08; 07 needs vLLM or Argo for tool calls). Provenance stays offline --- inspect
-  with the same terminal tools, no images to shuttle around.
+  \small \texttt{install.sh aurora} stacks a small delta on the ALCF \texttt{frameworks}
+  module (which ships the tuned XPU \texttt{vllm}); nothing is downloaded. All LLM usage
+  reads ALCF's staged hub at \texttt{/flare/datasets/model-weights} --- \texttt{env.sh}
+  points \texttt{HF\_HOME} there and sets \texttt{HF\_HUB\_OFFLINE=1}, so compute nodes
+  need no network. \textbf{vLLM is the only LLM backend on Aurora} ---
+  \textbf{06/07/08}'s \texttt{submit.pbs} serve \texttt{Llama-3.1-8B-Instruct} on the
+  node's own GPUs via \texttt{source ../vllm\_serve.sh \&\& vllm\_start}. \alert{No CPU
+  fallback}: \texttt{FLOWCEPT\_USE\_VLLM=0} means you must use Argo instead
+  (\texttt{ARGO\_USER=...}). Provenance stays offline --- inspect with the same terminal
+  tools, no images to shuttle around.
+\end{frame}
+
+\begin{frame}[fragile]{vLLM on Aurora: serve it yourself (+ interactive)}
+  \texttt{vllm\_start} does more than launch a server. On Aurora's XPU, \texttt{vllm
+  serve} normally \alert{SIGSEGVs} inspecting the model architecture (a subprocess
+  crash surfaced as ``\texttt{architectures ['LlamaForCausalLM'] failed to be
+  inspected}''). We dodge it: \texttt{vllm\_start} first \textbf{primes the modelinfo
+  cache in-process} (loads the model \emph{class}, no weights, no subprocess), then
+  serves against the cache --- \alert{handled automatically}, nothing to do by hand.
+  \vspace{0.3em}
+  \begin{itemize}\small
+    \item \textbf{Adopt-on-source}: sourcing \texttt{vllm\_serve.sh} in a \emph{fresh}
+      shell detects an already-running server and re-exports \texttt{VLLM\_BASE\_URL}
+      --- so \texttt{query.py --ask} routes to it without relaunching.
+    \item \textbf{Context window}: \texttt{VLLM\_MAX\_MODEL\_LEN=32768} (8192 was too
+      tight --- 08's group chat accumulates the whole discussion and overflowed it).
+  \end{itemize}
+\begin{lstlisting}[style=sh]
+qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=60:00   # interactive node
+source ../env.sh                            # modules + conda + offline LLM
+source ../vllm_serve.sh && vllm_start       # primes cache, serves on the GPUs
+python solution.py                          # or: query.py runs/<id>_* --ask "..."
+vllm_stop                                   # tear the server down; then exit
+\end{lstlisting}
 \end{frame}
 
 \begin{frame}{Recap}
