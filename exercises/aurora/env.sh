@@ -44,8 +44,14 @@ unset _flowcept_had_u
 # --- The single conda env (built once by setup/install.sh aurora) ----------
 # 'conda activate' needs conda's shell hook; submit.pbs falls back to `conda run`
 # if activation doesn't take in a non-interactive job.
+# NOTE: --stack. Per the ALCF vLLM docs, `vllm` lives in the `frameworks` module's base
+# env (module load frameworks -> /opt/aurora/.../bin/vllm). A plain `conda activate
+# $ENV_PREFIX` REPLACES that base on PATH, so the module's vllm disappears and
+# vllm_start can't find it. Stacking keeps the frameworks base underneath, so the
+# tutorial env's python (flowcept/academy) is used AND the module's `vllm` binary stays
+# reachable for the server (solution.py talks to vLLM over HTTP; it never imports it).
 source "$(conda info --base 2>/dev/null)/etc/profile.d/conda.sh" 2>/dev/null || true
-conda activate "$ENV_PREFIX" 2>/dev/null || true
+conda activate --stack "$ENV_PREFIX" 2>/dev/null || true
 
 if [[ ! -d "$ENV_PREFIX/conda-meta" ]]; then
     echo "!! no conda env at $ENV_PREFIX"

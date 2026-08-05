@@ -54,11 +54,22 @@ _VLLM_PID=""
 _VLLM_LOG=""
 
 vllm_start() {
+    # vLLM lives in the frameworks module base (/opt/aurora/.../bin/vllm), NOT in the
+    # tutorial conda env. If activating the tutorial env shadowed it (or the module
+    # isn't loaded), recover it from the module before giving up. Drop nounset around
+    # the module calls (Lmod derefs $ZSH_EVAL_CONTEXT, fatal under set -u).
+    if ! command -v vllm >/dev/null; then
+        _vllm_had_u=0; case $- in *u*) _vllm_had_u=1;; esac
+        set +u
+        module use /soft/modulefiles 2>/dev/null || true
+        module load frameworks 2>/dev/null || true
+        [[ $_vllm_had_u == 1 ]] && set -u; unset _vllm_had_u
+    fi
     command -v vllm >/dev/null || {
         echo "!! vllm not found. vLLM ships in the ALCF 'frameworks' module and needs the"
         echo "!! GPUs, so this only works on an AURORA COMPUTE NODE (qsub -I ... or inside"
-        echo "!! a batch job), after 'source ../env.sh' loads the module. On a login node or"
-        echo "!! laptop there is no vllm -- use the exercises/local/ CPU path there instead."
+        echo "!! a batch job), after 'module load frameworks'. On a login node or laptop"
+        echo "!! there is no vllm -- use the exercises/local/ CPU path there instead."
         return 1
     }
 
