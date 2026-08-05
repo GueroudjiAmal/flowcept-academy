@@ -59,6 +59,18 @@ export VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT:-$HOME/.cache/vllm}"
 _VLLM_PID=""
 _VLLM_LOG=""
 
+# Point the tutorial at the vLLM endpoint. flowcept_academy.util sees VLLM_BASE_URL and
+# builds a ChatOpenAI against it -- the same code path as Argo/OpenAI. Call this in EVERY
+# shell that will talk to vLLM (agents or query.py --ask): the exports live in the shell
+# that runs them, so a second shell needs its own `source ../vllm_serve.sh && vllm_start`
+# (which adopts an already-running server and re-exports these).
+_vllm_export_env() {
+    export FLOWCEPT_TUTORIAL_LLM=vllm
+    export VLLM_BASE_URL="http://localhost:$VLLM_PORT/v1"
+    export OPENAI_API_KEY=EMPTY
+    unset ARGO_USER            # else it would win the routing in which_backend()
+}
+
 # The frameworks Python that owns the `vllm` binary (NOT the tutorial env's python,
 # which has no vllm). `vllm` is a console script; its shebang is that interpreter.
 _vllm_python() {
@@ -133,13 +145,16 @@ vllm_start() {
         return 1
     }
 
-    # Refuse to start if something already answers on the port -- otherwise the
-    # readiness probe below would pass instantly against the wrong server (a stale
-    # vLLM from a previous run, say) and every request would go to it.
+    # If a vLLM is ALREADY answering on this port (e.g. you started it in another shell,
+    # or the batch job left it up), don't start a second server -- adopt it: just export
+    # the routing env into THIS shell and return. This is what makes
+    # `source ../vllm_serve.sh && vllm_start` work in a fresh shell for `query.py --ask`.
+    # (If it's the wrong server, set VLLM_PORT to a free port or kill the stale one.)
     if curl -s -o /dev/null -m 2 "http://localhost:$VLLM_PORT/v1/models"; then
-        echo "!! something is already listening on port $VLLM_PORT."
-        echo "!! Set VLLM_PORT to a free port, or kill the stale server first."
-        return 1
+        echo ">> vLLM already answering on port $VLLM_PORT -- adopting it (not starting a second server)."
+        _vllm_export_env
+        echo ">> routed: FLOWCEPT_TUTORIAL_LLM=vllm  VLLM_BASE_URL=$VLLM_BASE_URL"
+        return 0
     fi
 
     # Populate the modelinfo cache in-process FIRST, or serve segfaults on XPU.
@@ -189,12 +204,8 @@ vllm_start() {
     done
     echo ">> vLLM ready after ${waited}s"
 
-    # Route the tutorial at it. flowcept_academy.util sees VLLM_BASE_URL and builds
-    # a ChatOpenAI against this endpoint -- same code path as Argo/OpenAI.
-    export FLOWCEPT_TUTORIAL_LLM=vllm
-    export VLLM_BASE_URL="http://localhost:$VLLM_PORT/v1"
-    export OPENAI_API_KEY=EMPTY
-    unset ARGO_USER            # else it would win the routing in which_backend()
+    # Route this shell at it (same code path as Argo/OpenAI).
+    _vllm_export_env
 }
 
 # Signal a process and all its descendants, children first. vLLM forks engine

@@ -93,11 +93,77 @@ cd exercises/aurora/01-actor-client
 qsub submit.pbs                       # runs solution.py on a compute node
 ```
 
-Each run writes to its own `runs/<id>_<date-time>/` in the example folder
-(`flowcept_buffer.jsonl`, perf CSV, `<id>_card.md`). Interactive: grab a node
-(`qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=00:30:00 -l
-filesystems=home:flare`), `source ../env.sh`, then work through `python
-exercise.py` step by step.
+The job sources `env.sh`, runs `solution.py`, and writes everything to one
+`runs/<id>_<date-time>/` in the example folder — the job's own `job.out`/`job.err`
+land there too, alongside `flowcept_buffer.jsonl`, the perf CSV, and `<id>_card.md`
+(`submit.pbs` pre-creates the dir and exports `FLOWCEPT_RUN_DIR`, which
+`util.new_run_dir()` honors). For 06/07/08 the job also starts vLLM on the node's GPUs
+(see below); 01–05 use no LLM.
+
+To step through an exercise by hand instead of submitting a job, use **interactive
+mode** (next section).
+
+## Interactive mode (compute node)
+
+Batch (`qsub submit.pbs`) is the hands-off path: it does everything below for you and
+you read the results afterward. **Interactive mode** is for working through
+`exercise.py` one STEP at a time, or for iterating on the query tool — you get a shell
+*on the compute node itself*.
+
+**1. Grab a node** (from a login node). `debug` gives 1 node for up to 1 h; drop the
+`filesystems` you don't need:
+
+```bash
+qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=01:00:00 -l filesystems=home:flare
+```
+
+You land in a shell **on the node**. Everything from here runs there.
+
+**2. Set up the environment** (every fresh shell needs this):
+
+```bash
+cd <repo>/exercises/aurora/06-llm      # whichever example
+source ../env.sh                        # frameworks module + conda env + offline LLM + settings
+```
+
+**3. Start vLLM — only for 06/07/08** (01–05 use no LLM, skip this):
+
+```bash
+source ../vllm_serve.sh
+vllm_start        # primes the modelinfo cache (dodges the XPU SIGSEGV), serves the
+                  # ALCF-staged model on the GPUs, then exports VLLM_BASE_URL. ~2–5 min.
+```
+
+`vllm_start` blocks until `/v1/models` answers and prints `>> vLLM ready after Ns`. It
+leaves the server running in the background for the rest of your session; it is torn
+down automatically on shell/job exit, or explicitly with `vllm_stop`. See
+[*LLMs on Aurora*](#llms-on-aurora-vllm-on-the-nodes-own-gpus) below for how it works
+and [*The XPU model-inspection SIGSEGV*](#the-xpu-model-inspection-sigsegv-handled-automatically)
+for the cache-priming detail.
+
+**4. Run the exercise.** Either step through it (uncomment one `STEP` block at a time
+in `exercise.py`) or run the fully-instrumented harness:
+
+```bash
+python exercise.py          # STEP-by-STEP: baseline, then uncomment STEP 1..N and re-run
+# or
+python solution.py          # all steps at once (same thing the batch job runs)
+```
+
+Each run creates its own `runs/<id>_<date-time>/` right here in the example folder.
+
+**5. Query it** — same shell, vLLM already up (see the next section):
+
+```bash
+python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
+```
+
+**6. Done:** `vllm_stop` (optional — happens on exit anyway), then `exit` to release the
+node.
+
+> The whole batch flow is just steps 2–5 wrapped in `submit.pbs`. Interactive mode runs
+> the identical `env.sh` / `vllm_serve.sh` / scripts — nothing is different except that
+> *you* type the commands and see output live.
 
 ## Then query it
 
@@ -109,6 +175,14 @@ node (interactive or inside a job), start the server first, then ask:
 source ../vllm_serve.sh && vllm_start                 # ALCF-staged model on the GPUs, offline
 python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
 ```
+
+**Run `vllm_start` in the *same shell* as `--ask`.** The routing env (`VLLM_BASE_URL`,
+`FLOWCEPT_TUTORIAL_LLM=vllm`) is exported into the shell that runs it, so a **new** shell
+(or one where you just re-`source ../env.sh`) won't have it — you'll hit
+`vLLM backend selected but no endpoint: set VLLM_BASE_URL`. Just run
+`source ../vllm_serve.sh && vllm_start` in that shell: if a server is **already** up on
+the port it is *adopted* (the env is re-exported, no second server is started), so this
+is safe to run in every shell that needs the LLM.
 
 Without `--ask`, no server is needed:
 
