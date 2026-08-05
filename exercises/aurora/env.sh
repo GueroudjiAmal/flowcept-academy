@@ -78,6 +78,10 @@ export HF_HOME="${HF_HOME:-/flare/datasets/model-weights}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export FLOWCEPT_TUTORIAL_MODEL="${FLOWCEPT_TUTORIAL_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
+# Keep the vLLM model name in lockstep with the tutorial model so a single override of
+# FLOWCEPT_TUTORIAL_MODEL propagates, and util.py's vLLM branch (which reads VLLM_MODEL)
+# has the right name even before vllm_serve.sh is sourced. vllm_serve.sh honors this.
+export VLLM_MODEL="${VLLM_MODEL:-$FLOWCEPT_TUTORIAL_MODEL}"
 # There is no local/CPU backend on Aurora, so force vLLM unless the user deliberately
 # picked another *remote* backend (the Argo escape hatch). An unset value -- or a stale
 # `local` left over in the shell/~/.bashrc from a laptop session -- becomes `vllm`;

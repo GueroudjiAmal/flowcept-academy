@@ -176,13 +176,20 @@ source ../vllm_serve.sh && vllm_start                 # ALCF-staged model on the
 python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
 ```
 
-**Run `vllm_start` in the *same shell* as `--ask`.** The routing env (`VLLM_BASE_URL`,
-`FLOWCEPT_TUTORIAL_LLM=vllm`) is exported into the shell that runs it, so a **new** shell
-(or one where you just re-`source ../env.sh`) won't have it — you'll hit
-`vLLM backend selected but no endpoint: set VLLM_BASE_URL`. Just run
-`source ../vllm_serve.sh && vllm_start` in that shell: if a server is **already** up on
-the port it is *adopted* (the env is re-exported, no second server is started), so this
-is safe to run in every shell that needs the LLM.
+**Each shell needs the routing env.** `VLLM_BASE_URL` / `FLOWCEPT_TUTORIAL_LLM=vllm` are
+exported into the shell that starts the server, so a **new** shell won't have them and
+`--ask` would hit `vLLM backend selected but no endpoint`. The fix is automatic: in any
+new shell, once a server is up on the node,
+
+```bash
+source ../env.sh
+source ../vllm_serve.sh     # sees the running server and routes THIS shell to it
+```
+
+is all you need — **sourcing `vllm_serve.sh` adopts an already-running server** and
+exports the full routing env (`VLLM_BASE_URL`, `OPENAI_API_KEY=EMPTY`, `VLLM_MODEL`,
+unsets `ARGO_USER`). You only call `vllm_start` when you actually want to *launch* a
+server; it too adopts rather than double-starts if one is already up.
 
 Without `--ask`, no server is needed:
 

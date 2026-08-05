@@ -239,3 +239,17 @@ vllm_stop() {
     wait "$_VLLM_PID" 2>/dev/null || true
     _VLLM_PID=""
 }
+
+# --- On source: adopt an already-running server -----------------------------
+# So that just `source ../env.sh && source ../vllm_serve.sh` gives a fresh shell
+# EVERYTHING it needs (VLLM_BASE_URL etc.) when a vLLM is already up on this node --
+# e.g. a second shell for `query.py --ask` while a job/other shell serves the model.
+# No server yet? This is a no-op; the config vars + functions are defined, so the
+# normal `vllm_start` flow (prime cache -> serve -> export) still works. Never fatal.
+if curl -s -o /dev/null -m 2 "http://localhost:$VLLM_PORT/v1/models" 2>/dev/null; then
+    _vllm_export_env
+    echo ">> vLLM already up on port $VLLM_PORT -- routed this shell (VLLM_BASE_URL=$VLLM_BASE_URL)."
+    echo ">> (no need to run vllm_start here; use it only to LAUNCH a server.)"
+else
+    echo ">> vllm_serve.sh loaded. No server on port $VLLM_PORT yet -- run 'vllm_start' to launch one."
+fi
