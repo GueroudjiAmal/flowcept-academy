@@ -16,7 +16,16 @@ def new_run_dir(name: str, base: str = "runs") -> str:
     Each run's provenance (buffer, perf CSV, dashboard) goes into its own
     ``runs/<name>_<YYYYmmdd-HHMMSS>/`` directory so repeated runs never overwrite
     each other. A numeric suffix is added if two runs start in the same second.
+
+    A caller can pre-create the directory and pass it via ``FLOWCEPT_RUN_DIR`` (this
+    is how Aurora's ``submit.pbs`` puts the job's ``job.out``/``job.err`` in the SAME
+    folder as the provenance): when set, that exact directory is reused verbatim
+    instead of minting a new timestamped one.
     """
+    override = os.environ.get("FLOWCEPT_RUN_DIR")
+    if override:
+        os.makedirs(override, exist_ok=True)
+        return os.path.abspath(override)
     ts = time.strftime("%Y%m%d-%H%M%S")
     cand = os.path.join(base, f"{name}_{ts}")
     n = 0
@@ -100,7 +109,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 # the `frameworks` module and serves weights pre-staged under /flare/datasets. See
 # exercises/aurora/vllm_serve.sh, which sets these three variables for you.
 VLLM_BASE_URL = os.environ.get("VLLM_BASE_URL") or os.environ.get("OPENAI_BASE_URL")
-VLLM_MODEL = os.environ.get("VLLM_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+VLLM_MODEL = os.environ.get("VLLM_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
 
 
 def _vllm_base_url() -> str | None:
@@ -237,15 +246,28 @@ def make_chat_model(
     key = ("local", mid, max_new_tokens)
     chat = _CHAT_MODEL_CACHE.get(key)
     if chat is None:
-        pipe = HuggingFacePipeline.from_model_id(
-            model_id=mid,
-            task="text-generation",
-            pipeline_kwargs={
-                "max_new_tokens": max_new_tokens,
-                "do_sample": temperature > 0,
-                "return_full_text": False,
-            },
-        )
+        try:
+            pipe = HuggingFacePipeline.from_model_id(
+                model_id=mid,
+                task="text-generation",
+                pipeline_kwargs={
+                    "max_new_tokens": max_new_tokens,
+                    "do_sample": temperature > 0,
+                    "return_full_text": False,
+                },
+            )
+        except ImportError as exc:
+            # The local backend runs the model through `transformers` and needs an
+            # importable torch. On Aurora there is no local/CPU model -- every LLM call
+            # (agents and query.py --ask) goes through vLLM on the GPUs -- so this path
+            # should not be reached there. If it is, vLLM is not running.
+            raise RuntimeError(
+                "The 'local' LLM backend needs an importable PyTorch, which isn't "
+                "available here. On Aurora there is no local/CPU model: start vLLM "
+                "first with `source ../vllm_serve.sh && vllm_start` (serves the "
+                "ALCF-staged weights on this node's GPUs, offline), then re-run. "
+                f"Original import error: {exc}"
+            ) from exc
         chat = _AsyncChatHuggingFace(llm=pipe)
         _CHAT_MODEL_CACHE[key] = chat
     return chat

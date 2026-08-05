@@ -14,8 +14,18 @@ set -euo pipefail
 # not via qsub) default it to this script's own dir so cd/../env.sh/runs/ still resolve.
 : "${PBS_O_WORKDIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 cd "$PBS_O_WORKDIR"
+
+# Put the job's stdout/stderr in the SAME runs/<id>_<date-time>/ dir as the provenance:
+# pre-create it (timestamp format matches util.new_run_dir), pass it to Python via
+# FLOWCEPT_RUN_DIR (capture_run reuses it), then redirect this job's output into it.
+# The PBS -j oe file keeps only the pointer line below plus any pre-redirect error.
+export FLOWCEPT_RUN_DIR="$PBS_O_WORKDIR/runs/03-agent-agent_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$FLOWCEPT_RUN_DIR"
+echo "job + provenance -> $FLOWCEPT_RUN_DIR/"
+exec >"$FLOWCEPT_RUN_DIR/job.out" 2>"$FLOWCEPT_RUN_DIR/job.err"
+
 source ../env.sh                 # modules + conda env + offline LLM + Flowcept settings
 
 python solution.py               # (use exercise.py to work through the steps)
 
-echo "provenance -> $PBS_O_WORKDIR/runs/03-agent-agent_<date-time>/  (buffer, perf CSV, 03-agent-agent_card.md)"
+echo "provenance -> $FLOWCEPT_RUN_DIR/  (job.out, job.err, buffer, perf CSV, 03-agent-agent_card.md)"

@@ -14,17 +14,30 @@ set -euo pipefail
 # not via qsub) default it to this script's own dir so cd/../env.sh/runs/ still resolve.
 : "${PBS_O_WORKDIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 cd "$PBS_O_WORKDIR"
+
+# Put the job's stdout/stderr in the SAME runs/<id>_<date-time>/ dir as the provenance:
+# pre-create it (timestamp format matches util.new_run_dir), pass it to Python via
+# FLOWCEPT_RUN_DIR (capture_run reuses it), then redirect this job's output into it.
+# The PBS -j oe file keeps only the pointer line below plus any pre-redirect error.
+export FLOWCEPT_RUN_DIR="$PBS_O_WORKDIR/runs/08-discussion_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$FLOWCEPT_RUN_DIR"
+echo "job + provenance -> $FLOWCEPT_RUN_DIR/"
+exec >"$FLOWCEPT_RUN_DIR/job.out" 2>"$FLOWCEPT_RUN_DIR/job.err"
+
 source ../env.sh                 # modules + conda env + offline LLM + Flowcept settings
 
-# Serve a real model on this node's GPUs (no Argo / no api.openai.com needed).
-# Set FLOWCEPT_USE_VLLM=0 to fall back to the same staged weights on the CPU via
-# transformers instead -- no GPU startup, but much slower and no tool calls.
+# Serve the ALCF-staged model on this node's GPUs (offline; no Argo / no api.openai.com).
+# vLLM is the only LLM backend on Aurora -- there is no CPU fallback. The escape hatch is
+# Argo: export FLOWCEPT_TUTORIAL_LLM=argo ARGO_USER=... FLOWCEPT_USE_VLLM=0.
 # Walltime above allows for vLLM startup (~2-5 min).
 if [[ "${FLOWCEPT_USE_VLLM:-1}" == 1 ]]; then
     source ../vllm_serve.sh
     vllm_start
+elif [[ -z "${ARGO_USER:-}" ]]; then
+    echo "!! No local LLM on Aurora: leave FLOWCEPT_USE_VLLM=1 (vLLM on the GPUs) or set ARGO_USER."
+    exit 1
 fi
 
 python solution.py               # (use exercise.py to work through the steps)
 
-echo "provenance -> $PBS_O_WORKDIR/runs/08-discussion_<date-time>/  (buffer, perf CSV, 08-discussion_card.md)"
+echo "provenance -> $FLOWCEPT_RUN_DIR/  (job.out, job.err, buffer, perf CSV, 08-discussion_card.md)"

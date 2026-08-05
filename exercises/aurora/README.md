@@ -35,12 +35,13 @@ pre-cache step. Do **not** export your own `HF_HOME`; that would point the stack
 from the staged hub and offline loads would fail. If `FLOWCEPT_ENV_PREFIX` is unset it
 falls back to `$REPO/envs/flowcept-academy` and warns if nothing is built there.
 
-> **What "local" runs.** The tutorial's `local` backend loads `FLOWCEPT_TUTORIAL_MODEL`
-> (default `meta-llama/Llama-3.1-8B-Instruct`) from the staged hub via `transformers` on
-> the **CPU** — an 8B is slow there, so this path is only query.py's `ask()` and the
-> `FLOWCEPT_USE_VLLM=0` opt-out. Examples 06/07/08 serve the same weights *fast* on the
-> GPUs with vLLM (see below). To use a different staged model, set
-> `FLOWCEPT_TUTORIAL_MODEL` to one that actually exists under `$HF_HOME/hub`.
+> **No local/CPU model on Aurora.** Every LLM call — the 06/07/08 agents **and**
+> `query.py --ask` — goes through **vLLM on the node's GPUs**, serving the ALCF-staged
+> weights offline; there is no `transformers`-on-CPU fallback here. So before anything
+> that needs an LLM (including `--ask`), bring the server up with
+> `source ../vllm_serve.sh && vllm_start`. `env.sh` defaults the backend to `vllm`. To
+> serve a different staged model, set `FLOWCEPT_TUTORIAL_MODEL`/`VLLM_MODEL` to one that
+> actually exists under `$HF_HOME/hub`.
 
 > **Exercise 07 chemistry, if conda-forge can't solve against the clone.** If
 > `install.sh` warns that `xtb-python`/`rdkit`/`ase` didn't solve, build a tiny
@@ -100,8 +101,19 @@ exercise.py` step by step.
 
 ## Then query it
 
+The plain query REPL uses no LLM. `--ask` (natural-language questions) does, and on
+Aurora that means **vLLM must be running** — there is no CPU fallback. From a compute
+node (interactive or inside a job), start the server first, then ask:
+
 ```bash
+source ../vllm_serve.sh && vllm_start                 # ALCF-staged model on the GPUs, offline
 python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
+```
+
+Without `--ask`, no server is needed:
+
+```bash
+python ../../../provenance/query.py runs/<id>_*       # structured queries, no LLM
 ```
 
 Examples 05 and 07 need the `parsl` / `langgraph` extras, already installed by
@@ -109,12 +121,12 @@ Examples 05 and 07 need the `parsl` / `langgraph` extras, already installed by
 
 ## LLMs on Aurora: vLLM on the node's own GPUs
 
-Compute nodes reach neither Argo nor `api.openai.com`, and the CPU fallback
-(`Llama-3.1-8B-Instruct` through transformers) is slow and **cannot emit tool
-calls** — which example 07 requires. So examples 06/07/08 serve a real model
-*locally*: vLLM ships in the `frameworks` module and reads weights straight from
-ALCF's staged hub at `/flare/datasets/model-weights`, so nothing is downloaded and
-no external network is touched. vLLM speaks the OpenAI API, so
+Compute nodes reach neither Argo nor `api.openai.com`, and there is **no CPU/local
+model** on Aurora — so **every** LLM call (the 06/07/08 agents and `query.py --ask`)
+goes through vLLM on the node's own GPUs. vLLM ships in the `frameworks` module and
+reads weights straight from ALCF's staged hub at `/flare/datasets/model-weights`, so
+nothing is downloaded and no external network is touched. It also emits real tool
+calls (which example 07 requires). vLLM speaks the OpenAI API, so
 [`flowcept_academy.util`](../../flowcept_academy/util.py) routes to it through the
 same `ChatOpenAI` path Argo/OpenAI use — **the agent code is unchanged**.
 
@@ -137,13 +149,12 @@ vllm_stop             # also runs automatically on job exit
 | `VLLM_TOOL_PARSER` | `llama3_json` | **Must match the model family** — `hermes` for Qwen |
 | `VLLM_TP` | `1` | Tiles; raise only for larger models |
 | `VLLM_PORT` | `8000` | |
-| `FLOWCEPT_USE_VLLM` | `1` | `0` → fall back to the CPU model (06/08 only) |
+| `FLOWCEPT_USE_VLLM` | `1` | `0` skips starting vLLM — then set `FLOWCEPT_TUTORIAL_LLM=argo ARGO_USER=...` (there is no CPU fallback) |
 
 The parser matters: with the wrong one the server runs fine but never produces a
 parseable tool call, so 07 retries a few times (~3) and then fails. Startup costs
-~2–5 minutes and one GPU
-tile, which is why 01–05 stay on the CPU model — the walltime in 06/07/08's
-`submit.pbs` is already raised to account for it.
+~2–5 minutes and one GPU tile, which is why 01–05 (no LLM) don't start it — the
+walltime in 06/07/08's `submit.pbs` is already raised to account for it.
 
 ### One-time: populate vLLM's modelinfo cache
 

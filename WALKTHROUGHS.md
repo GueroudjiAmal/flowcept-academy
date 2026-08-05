@@ -17,8 +17,9 @@ python ../../../provenance/query.py runs/<id>_* --ask "..."
 
 The per-example sections below are **identical on Aurora** — the science, the
 provenance graph, and the `ask(...)` questions do not change. What changes is *how you
-launch*: a compute-node batch job instead of a local process, and (for the LLM
-examples) a GPU-served **vLLM** model instead of the local CPU one. Full operational
+launch*: a compute-node batch job instead of a local process, and every LLM call goes
+to a GPU-served **vLLM** model (ALCF-staged weights, offline) — there is no CPU/local
+model on Aurora. Full operational
 detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix — is in
 [`exercises/aurora/README.md`](exercises/aurora/README.md). The short version:
 
@@ -43,19 +44,19 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    cd exercises/aurora/01-actor-client && qsub submit.pbs
    ```
 
-   The job sources `env.sh`, runs `solution.py`, and writes `runs/<id>_<date-time>/`.
-   Backend need per example:
-   - **01–05** — no LLM (03/05 just offload compute); run on the CPU env as-is.
-   - **06, 08** — `submit.pbs` starts vLLM on the node's GPUs by default; set
-     `FLOWCEPT_USE_VLLM=0` to fall back to the staged model on CPU via transformers
-     (much slower, no tool calls).
-   - **07** — **requires** tool calling: keep the default vLLM, or
-     `export ARGO_USER=... FLOWCEPT_USE_VLLM=0` if the node reaches Argo. On the plain
-     CPU fallback its `tool_calling` node retries a few times, then fails.
+   The job sources `env.sh`, runs `solution.py`, and writes `runs/<id>_<date-time>/`
+   (the job's own `job.out`/`job.err` land there too). Backend need per example:
+   - **01–05** — no LLM (03/05 just offload compute); nothing to start.
+   - **06, 07, 08** — need an LLM; `submit.pbs` starts vLLM on the node's GPUs by
+     default. There is no CPU fallback. 07 **requires** tool calling (vLLM provides it).
+     Escape hatch if the node reaches Argo:
+     `export FLOWCEPT_TUTORIAL_LLM=argo ARGO_USER=... FLOWCEPT_USE_VLLM=0`.
 
-3. **Query the result** — same tool as local, from the example folder:
+3. **Query the result** — same tool as local, from the example folder. The plain REPL
+   needs no LLM; `--ask` does, so start vLLM first (no CPU fallback on Aurora):
 
    ```bash
+   source ../vllm_serve.sh && vllm_start                 # only needed for --ask
    python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
    ```
 
@@ -172,7 +173,7 @@ What the provenance reveals:
 What it does: an `Orchestrator` builds a LangChain ReACT agent (`create_agent`)
 over a tool that messages a separate `MySimAgent`; the LLM decides whether to call
 the tool to get a simulated energy, then writes the answer. (LLM = Argo →
-vLLM → OpenAI → local CPU model, in priority order.)
+vLLM → OpenAI → local CPU model, in priority order; on Aurora it's always vLLM.)
 
 What the provenance reveals:
   - `llm_call` tasks linked to their enclosing `@action` (`answer`) via

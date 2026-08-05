@@ -58,39 +58,39 @@ fi
 # matter; if you add GPU work, uncomment:
 #   export ONEAPI_DEVICE_SELECTOR=level_zero:gpu
 
-# --- LLM: ALCF's pre-staged weights, fully offline -------------------------
-# Nothing is downloaded. HF_HOME points at ALCF's read-only staged hub under
-# /flare/datasets/model-weights (same one vLLM reads), and offline flags force the
-# HuggingFace stack to load only from there -- so the compute nodes never touch the
-# network. The tutorial's "local" backend loads FLOWCEPT_TUTORIAL_MODEL from that hub;
-# it must be a model actually staged there (see the ALCF Aurora vLLM docs / `ls
-# $HF_HOME/hub`). NOTE: the local backend runs via `transformers` on CPU -- an 8B is
-# slow there, so this is only the FLOWCEPT_USE_VLLM=0 opt-out and query.py's ask();
-# 06/07/08 serve the same weights fast on the GPUs via vLLM (below).
+# --- LLM: ALCF's pre-staged weights, served offline by vLLM ----------------
+# Nothing is downloaded and there is NO local/CPU model on Aurora: every LLM call
+# (the 06/07/08 agents AND query.py's --ask) uses an ALCF-staged model under
+# /flare/datasets/model-weights, served by vLLM on this node's own GPUs, fully offline.
+# HF_HOME points at that read-only hub and the offline flags keep the HuggingFace stack
+# from touching the network. FLOWCEPT_TUTORIAL_MODEL / VLLM_MODEL name the staged model
+# to serve (it must exist under $HF_HOME/hub -- see the ALCF Aurora vLLM docs / `ls
+# $HF_HOME/hub`). The default backend is vLLM (overridable); `vllm_start` (below) brings
+# the server up and exports VLLM_BASE_URL so this default resolves.
 export HF_HOME="${HF_HOME:-/flare/datasets/model-weights}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export FLOWCEPT_TUTORIAL_MODEL="${FLOWCEPT_TUTORIAL_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
-export FLOWCEPT_TUTORIAL_LLM=local
+export FLOWCEPT_TUTORIAL_LLM="${FLOWCEPT_TUTORIAL_LLM:-vllm}"
 
 # --- Flowcept: offline (no Redis/Mongo); records -> flowcept_buffer.jsonl --
 export FLOWCEPT_SETTINGS_PATH="$REPO/setup/flowcept_settings.yaml"
 
-# --- LLM for exercises 06/07/08: vLLM on the node's GPUs (default) ----------
-# 06/07/08 use an LLM; their submit.pbs serve a real, tool-capable model on this
-# node's own GPUs via `source ../vllm_serve.sh && vllm_start` (the same ALCF-staged
-# weights, no network). vllm_start exports FLOWCEPT_TUTORIAL_LLM=vllm and
-# VLLM_BASE_URL, overriding the `local` default set above. See
+# --- Serving the model: vLLM on the node's GPUs -----------------------------
+# 06/07/08 use an LLM; their submit.pbs bring the server up via
+# `source ../vllm_serve.sh && vllm_start` (the same ALCF-staged weights, no network),
+# which exports VLLM_BASE_URL so the vLLM default above resolves. There is no CPU
+# fallback -- vLLM is the only LLM backend on Aurora. See
 # exercises/aurora/README.md ("LLMs on Aurora").
 #   * 07 REQUIRES tool calling -- its LangGraph tool_calling node retries a few times
 #     and then fails unless the model emits a parseable tool call.
-#   * 06/08 default to vLLM too; set FLOWCEPT_USE_VLLM=0 to fall back to the staged
-#     model above on CPU via transformers (much slower, weaker, no tool calls).
-# Alternative to vLLM, if the compute node reaches the ANL gateway (native tool calls):
-#         export ARGO_USER=<your_anl_username> FLOWCEPT_USE_VLLM=0
+#   * To run query.py's `--ask` you likewise need vLLM up first (same vllm_start); the
+#     plain query REPL uses no LLM and needs nothing.
+# Escape hatch, if the node reaches the ANL gateway (online, native tool calls):
+#         export FLOWCEPT_TUTORIAL_LLM=argo ARGO_USER=<your_anl_username> FLOWCEPT_USE_VLLM=0
 # Examples 01-05 use no LLM (03/05 only offload compute) and ignore all of this.
 
 # Exported so each submit.pbs can fall back to `conda run -p "$FLOWCEPT_ENV_PREFIX"`.
 export FLOWCEPT_ENV_PREFIX="$ENV_PREFIX"
 
-echo "env ready: conda=$ENV_PREFIX  LLM=local(offline)  flowcept=offline"
+echo "env ready: conda=$ENV_PREFIX  LLM=vllm(offline staged)  flowcept=offline"

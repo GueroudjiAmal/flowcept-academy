@@ -14,13 +14,22 @@ set -euo pipefail
 # not via qsub) default it to this script's own dir so cd/../env.sh/runs/ still resolve.
 : "${PBS_O_WORKDIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 cd "$PBS_O_WORKDIR"
+
+# Put the job's stdout/stderr in the SAME runs/<id>_<date-time>/ dir as the provenance:
+# pre-create it (timestamp format matches util.new_run_dir), pass it to Python via
+# FLOWCEPT_RUN_DIR (capture_run reuses it), then redirect this job's output into it.
+# The PBS -j oe file keeps only the pointer line below plus any pre-redirect error.
+export FLOWCEPT_RUN_DIR="$PBS_O_WORKDIR/runs/07-mol-design_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$FLOWCEPT_RUN_DIR"
+echo "job + provenance -> $FLOWCEPT_RUN_DIR/"
+exec >"$FLOWCEPT_RUN_DIR/job.out" 2>"$FLOWCEPT_RUN_DIR/job.err"
+
 source ../env.sh                 # one conda env (rdkit+ase+xtb + agents/LLM) + Flowcept settings
 
-# 07's LangGraph tool_calling node NEEDS a model that emits real tool calls, so
-# unlike 06/08 this is not optional: the CPU transformers fallback retries only a few
-# times (~3) and then fails, because it never produces a parseable tool call.
-# vllm_start serves Llama-3.1-8B with --enable-auto-tool-choice on this node's GPUs.
-# (If you do have Argo reachability, `export ARGO_USER=... FLOWCEPT_USE_VLLM=0`.)
+# 07's LangGraph tool_calling node NEEDS a model that emits real tool calls. vLLM is the
+# only LLM backend on Aurora (there is no CPU fallback); vllm_start serves the staged
+# Llama-3.1-8B with --enable-auto-tool-choice on this node's GPUs.
+# (If you do have Argo reachability: `export FLOWCEPT_TUTORIAL_LLM=argo ARGO_USER=... FLOWCEPT_USE_VLLM=0`.)
 if [[ "${FLOWCEPT_USE_VLLM:-1}" == 1 ]]; then
     source ../vllm_serve.sh
     vllm_start
@@ -36,4 +45,4 @@ else
     conda run --no-capture-output -p "$FLOWCEPT_ENV_PREFIX" python solution.py
 fi
 
-echo "provenance -> $PBS_O_WORKDIR/runs/07-mol-design_<date-time>/  (buffer, perf CSV, 07-mol-design_card.md)"
+echo "provenance -> $FLOWCEPT_RUN_DIR/  (job.out, job.err, buffer, perf CSV, 07-mol-design_card.md)"
