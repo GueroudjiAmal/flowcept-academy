@@ -60,7 +60,7 @@ query tool — plus a step-by-step **Running on Aurora** flow — see
 ```bash
 cd exercises/local/01-actor-client
 python exercise.py          # STEP 0: baseline (no provenance)
-# uncomment STEP 1 in main(), re-run; then STEP 2, ... then STEP 5.
+# uncomment STEP 1 in main(), re-run; then STEP 2, ... then STEP 4 (STEP 5 is query.py).
 python solution.py          # or just run the fully-instrumented reference
 ```
 
@@ -121,9 +121,11 @@ Checked in priority order (first match wins):
 | else `OPENAI_API_KEY` set | **OpenAI** (`api.openai.com`, model `OPENAI_MODEL`, default `gpt-4o-mini`), native tool calling |
 | else | **local CPU** model (`Qwen/Qwen2.5-0.5B-Instruct`, needs `transformers`+`torch`) |
 
-The chain falls back automatically. There is **no mock backend** — every response
-comes from a real model; if none is usable, `chat()` raises instead of fabricating
-text. Force with `FLOWCEPT_TUTORIAL_LLM=argo|vllm|openai|local`; pick the local model
+The chain falls back automatically, ending at the **local CPU** model — so with no
+env set at all, `chat()` still answers (never a mock: there is **no mock backend**,
+every response comes from a real model). `FLOWCEPT_TUTORIAL_LLM=argo|vllm|openai|local`
+forces one, checked before the chain; forcing one whose config is missing (e.g. `vllm`
+with no `VLLM_BASE_URL`) raises rather than fabricating text. Pick the local model
 with `FLOWCEPT_TUTORIAL_MODEL=...`. Examples that need tool calls (e.g. 07) work on
 Argo, vLLM, or OpenAI; the local 0.5B model does not emit tool calls.
 
@@ -178,7 +180,7 @@ flowcept-academy/
 │   └── aurora/<id>/    + submit.pbs        · env.sh (shared)
 ├── flowcept_academy/   # the reusable library
 │   ├── capture.py      # captured() + langgraph_capture(): turn provenance on
-│   ├── provenance.py   # load / summarize / lineage / tailored / card / text dashboard
+│   ├── provenance.py   # load_buffer/load_records · print_summary · print_lineage · print_tailored · provenance_card · text_dashboard
 │   └── util.py         # run() helper + make_chat_model()/chat() (Argo -> vLLM -> OpenAI -> local, no mock)
 ├── provenance/
 │   ├── analyze.py      # inspect any buffer / dir (+ --all), terminal-only

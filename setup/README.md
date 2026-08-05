@@ -33,8 +33,8 @@ in conda so `xtb-python` installs — there is no PyPI `xtb` wheel for the base'
 ```bash
 # point the env at project space -- a clone of the base is many GB and will blow
 # through your home quota (check with `myquota`). ALCF warns the clone is slow.
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache     # model cache, same reason
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache     # model cache, same reason
 
 bash setup/install.sh aurora    # also pre-caches the offline CPU LLM (login node, online)
 ```
@@ -54,8 +54,8 @@ Add `--shared` and point the prefix at group-writable project space instead of a
 `$USER` directory:
 
 ```bash
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC/shared/hf_cache
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
 bash setup/install.sh aurora --shared
 ```
 
@@ -79,11 +79,11 @@ Checked in priority order (first match wins):
 
 | Condition | Backend |
 |---|---|
-| `ARGO_USER` set | ANL **Argo** gateway, native tool calling |
+| `FLOWCEPT_TUTORIAL_LLM=argo\|vllm\|openai\|local` | **override** — checked first; forces that backend (no mock). Forcing one whose config is missing, e.g. `vllm` with no `VLLM_BASE_URL`, raises |
+| else `ARGO_USER` set | ANL **Argo** gateway, native tool calling |
 | else `VLLM_BASE_URL` / `OPENAI_BASE_URL` set | **vLLM** — a server you run yourself (model `VLLM_MODEL`), native tool calling. This is the Aurora path: see [`exercises/aurora/vllm_serve.sh`](../exercises/aurora/vllm_serve.sh) |
 | else `OPENAI_API_KEY` set | **OpenAI** (`api.openai.com`, model `OPENAI_MODEL`, default `gpt-4o-mini`), native tool calling |
-| else | **local CPU** model (`Qwen/Qwen2.5-0.5B-Instruct`; `FLOWCEPT_TUTORIAL_MODEL` to change) |
-| `FLOWCEPT_TUTORIAL_LLM=argo\|vllm\|openai\|local` | force a backend (no mock; raises if none is usable) |
+| else | **local CPU** model (`Qwen/Qwen2.5-0.5B-Instruct`; `FLOWCEPT_TUTORIAL_MODEL` to change) — the unconditional last resort |
 
 On Aurora, compute nodes reach neither Argo nor OpenAI, so examples 06/07/08 use the
 **vLLM** row — a model served on the node's own GPUs from ALCF's staged weights, no

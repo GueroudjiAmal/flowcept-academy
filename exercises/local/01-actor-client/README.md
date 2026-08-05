@@ -3,13 +3,13 @@
 **Shows:** agent lifecycle + actions
 
 What it does: launches one stateful `Counter` agent and, from a client, calls its
-`@action`s (`increment`, `increment(10)`, `get_count`). No LLM, no other agents.
+`@action`s (`get_count`, `increment`, `get_count`). No LLM, no other agents.
 
 What the provenance reveals:
   - agent lifecycle: `academy_lifecycle` startup/shutdown records for the agent.
   - one `academy_action` per call, each with `used` (inputs) and `generated`
-    (outputs) -- so you can watch the state evolve: increment -> increment(10)
-    -> get_count = 11, every call marked status=FINISHED.
+    (outputs) -- so you can watch the state evolve: get_count=0 -> increment
+    -> get_count=1, every call marked status=FINISHED.
   - the simplest possible capture: this is the baseline the other examples build on.
 
 ## Steps (local)

@@ -19,8 +19,8 @@ Point the prefix at **project space**: a clone of the base is many GB and will n
 a home quota (`myquota`). ALCF warns the clone is slow — it is a one-time cost.
 
 ```bash
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache
 # ^ add both to ~/.bashrc so batch jobs inherit them
 
 bash setup/install.sh aurora          # clones the frameworks base + adds the delta
@@ -46,7 +46,7 @@ if nothing is built there.
 > `install.sh` warns that `xtb-python`/`rdkit`/`ase` didn't solve, build a tiny
 > standalone env just for the chemistry and point 07 at it — 01–06/08 are unaffected:
 > ```bash
-> conda create -p /lus/flare/projects/ATPESC/$USER/envs/fca-xtb -c conda-forge \
+> conda create -p /lus/flare/projects/ATPESC2026/prov/$USER/envs/fca-xtb -c conda-forge \
 >   --yes python=3.11 xtb-python rdkit ase
 > ```
 > (07's `submit.pbs` already falls back to `conda run -p "$FLOWCEPT_ENV_PREFIX"`; for a
@@ -57,8 +57,8 @@ if nothing is built there.
 Build it **once**, into group-writable project space rather than a `$USER` directory:
 
 ```bash
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC/shared/hf_cache
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
 bash setup/install.sh aurora --shared     # clones the base, adds the delta, pre-caches the CPU LLM
 source exercises/aurora/env.sh
 ```
@@ -74,8 +74,8 @@ builder's clone; re-run the same command to republish after editing
 Everyone else then adds two lines to `~/.bashrc` and never runs the installer:
 
 ```bash
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC/shared/hf_cache
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
 ```
 
 and per session just `source exercises/aurora/env.sh`. Each user still needs their own
@@ -88,7 +88,7 @@ multi-GB env and model cache are downloaded once for the group.
 
 ## Run an example
 
-Batch (`submit.pbs` already has `-A ATPESC`):
+Batch (`submit.pbs` already has `-A ATPESC2026`):
 
 ```bash
 cd exercises/aurora/01-actor-client
@@ -97,7 +97,7 @@ qsub submit.pbs                       # runs solution.py on a compute node
 
 Each run writes to its own `runs/<id>_<date-time>/` in the example folder
 (`flowcept_buffer.jsonl`, perf CSV, `<id>_card.md`). Interactive: grab a node
-(`qsub -I -A ATPESC -q debug -l select=1 -l walltime=00:30:00 -l
+(`qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=00:30:00 -l
 filesystems=home:flare`), `source ../env.sh`, then work through `python
 exercise.py` step by step.
 
@@ -157,7 +157,7 @@ vLLM has a documented first-run bug filling `modelinfos` in `VLLM_CACHE_ROOT`
 [argonne-lcf/frameworks-sdk](https://github.com/argonne-lcf/frameworks-sdk):
 
 ```bash
-export VLLM_CACHE_ROOT=/lus/flare/projects/ATPESC/shared/vllm_cache   # shared setup
+export VLLM_CACHE_ROOT=/lus/flare/projects/ATPESC2026/prov/vllm_cache   # shared setup
 python vllm_build_all_modelinfo_caches.py
 ```
 

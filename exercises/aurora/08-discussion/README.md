@@ -33,7 +33,7 @@ Each run writes to its own `runs/08-discussion_<date-time>/` (buffer, perf CSV, 
 | 4 | `provenance_card(...)` | `08-discussion_card.md` in the run dir (Flowcept's markdown card) |
 | 5 | `query.py runs/08-discussion_*` | natural-language questions -> pandas |
 
-On Aurora, submit the job (`submit.pbs` already has `-A ATPESC`):
+On Aurora, submit the job (`submit.pbs` already has `-A ATPESC2026`):
 
 ```bash
 qsub submit.pbs         # runs solution.py on a compute node

@@ -25,8 +25,8 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
 1. **One-time, on a login node** (login nodes have internet; compute nodes do not):
 
    ```bash
-   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
-   export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache   # add both to ~/.bashrc
+   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
+   export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache   # add both to ~/.bashrc
    bash setup/install.sh aurora     # clones the frameworks base + delta; pre-caches the CPU LLM
    source exercises/aurora/env.sh
    ```
@@ -36,7 +36,7 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    (06/07/08) also populate vLLM's modelinfo cache once — see *"One-time: populate
    vLLM's modelinfo cache"* in the Aurora README.
 
-2. **Submit an example** (`submit.pbs` already has `-A ATPESC`):
+2. **Submit an example** (`submit.pbs` already has `-A ATPESC2026`):
 
    ```bash
    cd exercises/aurora/01-actor-client && qsub submit.pbs
@@ -59,7 +59,7 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    ```
 
 To work through `exercise.py` STEP by STEP interactively, grab a node
-(`qsub -I -A ATPESC -q debug -l select=1 -l walltime=00:30:00 -l filesystems=home:flare`),
+(`qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=00:30:00 -l filesystems=home:flare`),
 `source ../env.sh`, and — for 06/07/08 — `source ../vllm_serve.sh && vllm_start`
 before running. Everything below then applies verbatim; just read `runs/<id>_*` from
 the compute-node run.
@@ -68,13 +68,13 @@ the compute-node run.
 ## 01-actor-client  —  agent lifecycle + actions
 
 What it does: launches one stateful `Counter` agent and, from a client, calls its
-`@action`s (`increment`, `increment(10)`, `get_count`). No LLM, no other agents.
+`@action`s (`get_count`, `increment`, `get_count`). No LLM, no other agents.
 
 What the provenance reveals:
   - agent lifecycle: `academy_lifecycle` startup/shutdown records for the agent.
   - one `academy_action` per call, each with `used` (inputs) and `generated`
-    (outputs) -- so you can watch the state evolve: increment -> increment(10)
-    -> get_count = 11, every call marked status=FINISHED.
+    (outputs) -- so you can watch the state evolve: get_count=0 -> increment
+    -> get_count=1, every call marked status=FINISHED.
   - the simplest possible capture: this is the baseline the other examples build on.
 
 **Ask the query tool** (`python ../../../provenance/query.py runs/<id>_* --ask "..."`):
@@ -85,8 +85,8 @@ What the provenance reveals:
 
 ## 02-agent-loop  —  autonomous @loop events
 
-What it does: a `Counter` agent with an autonomous `@loop` (`ticker`) that
-increments itself every 0.5s in the background; the client just reads the count.
+What it does: a `Counter` agent with an autonomous `@loop` (`increment`) that
+increments itself every second in the background; the client just reads the count.
 
 What the provenance reveals:
   - `academy_loop` records for the loop's **start** and **exit**, sharing a

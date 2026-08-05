@@ -13,11 +13,11 @@
 #           and adds the tutorial delta on top.
 #           Set FLOWCEPT_ENV_PREFIX to a project-space path so the multi-GB clone and
 #           the HF model cache stay off your home quota, e.g.
-#             export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
+#             export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
 #
 # --shared -- ONE env for everyone on the project, built once by whoever runs this:
 #   * env prefix must be group-writable project space, NOT a per-user directory, e.g.
-#       export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy
+#       export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
 #   * setgid + umask 002 so every file lands in the project group,
 #     then `chmod -R g+rX` -> group-READABLE, not group-writable. Rebuilds are the
 #     owner's job; a teammate who needs to change it makes their own env.
@@ -85,10 +85,10 @@ case "$MODE" in
                 echo ">>          a clone of the frameworks base is many GB; check \`myquota\`."
                 if (( SHARED )); then
                     echo ">>          \$HOME is NOT group-accessible on Aurora -- a shared env must live in"
-                    echo ">>          project space: /lus/flare/projects/ATPESC/shared/envs/$ENV"
+                    echo ">>          project space: /lus/flare/projects/ATPESC2026/prov/envs/$ENV"
                     exit 1
                 fi
-                echo ">>          Prefer: export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/\$USER/envs/$ENV"
+                echo ">>          Prefer: export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/\$USER/envs/$ENV"
                 ;;
         esac
         if (( SHARED )); then
@@ -221,7 +221,7 @@ if [[ "$MODE" == aurora ]]; then
     echo "     # get vllm_build_all_modelinfo_caches.py from argonne-lcf/frameworks-sdk, then:"
     echo "     python vllm_build_all_modelinfo_caches.py"
     echo ">> Re-run that if you ever move VLLM_CACHE_ROOT."
-    echo ">> Start here:      cd exercises/aurora/01-actor-client && qsub submit.pbs   (-A ATPESC set)"
+    echo ">> Start here:      cd exercises/aurora/01-actor-client && qsub submit.pbs   (-A ATPESC2026 set)"
 else
     echo ">> Start here:      cd exercises/local/01-actor-client && python exercise.py"
 fi

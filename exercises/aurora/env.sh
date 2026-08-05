@@ -9,7 +9,7 @@
 # Per the ALCF Python-on-Aurora docs the env lives at an explicit --prefix, not a
 # name. Export the SAME FLOWCEPT_ENV_PREFIX you used at install time (put it in your
 # ~/.bashrc so batch jobs see it too); otherwise this falls back to $REPO/envs/.
-#   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
+#   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
 
 # This file must be SOURCED, not executed. It runs `conda activate` and `export`s
 # INTO your shell; `bash env.sh` runs in a subshell where those changes die on exit
@@ -49,7 +49,7 @@ conda activate "$ENV_PREFIX" 2>/dev/null || true
 if [[ ! -d "$ENV_PREFIX/conda-meta" ]]; then
     echo "!! no conda env at $ENV_PREFIX"
     echo "!! If your project has a SHARED env, just point at it (and add this to ~/.bashrc):"
-    echo "!!     export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy"
+    echo "!!     export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy"
     echo "!! Otherwise build your own:  bash setup/install.sh aurora"
 fi
 
@@ -67,7 +67,7 @@ fi
 #     python -c "from flowcept_academy.util import chat; chat('hi')"
 # (Sourcing this file first would set HF_HUB_OFFLINE=1 and the download would fail.)
 # Keep the cache off your home quota -- set HF_HOME next to the env if the repo lives
-# in $HOME:  export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache
+# in $HOME:  export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache
 export HF_HOME="${HF_HOME:-$REPO/hf_cache}"
 export HF_HUB_OFFLINE=1
 export FLOWCEPT_TUTORIAL_LLM=local

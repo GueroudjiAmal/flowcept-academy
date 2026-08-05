@@ -71,7 +71,7 @@
 exercises/
   local/    run on a laptop / login shell   (python exercise.py)
   aurora/   run on ALCF Aurora              (qsub submit.pbs; shared env.sh)
-    <id>/   exercise.py  solution.py  README.md  [submit.pbs]
+    <id>/   exercise.py  solution.py  agent_src.py  README.md  [submit.pbs]
 \end{lstlisting}
   \begin{itemize}\small
     \item \texttt{exercise.py} --- STEP 0 baseline, then STEP 1 capture, 2 inspect,
@@ -390,22 +390,27 @@ class SimulationAgent(Agent):
   debugging payoff, and the reason agentic runs need this most.
 \end{frame}
 
-\begin{frame}[fragile]{Running on Aurora (CPU, offline, terminal-only)}
-  Each example under \texttt{exercises/aurora/<id>/} has its own \texttt{submit.pbs};
-  all share \texttt{exercises/aurora/env.sh} (modules + conda env + offline LLM + settings).
+\begin{frame}[fragile]{Running on Aurora (offline, terminal-only)}
+  Each example under \texttt{exercises/aurora/<id>/} has its own \texttt{submit.pbs}
+  (\texttt{-A ATPESC2026} already set); all share \texttt{exercises/aurora/env.sh}
+  (modules + conda env + offline LLM + settings).
 \begin{lstlisting}[style=sh]
-# once, on a login node (has internet): build the env + pre-cache the local model
-bash setup/install.sh            # -> conda env `flowcept-academy`
+# once, on a login node (has internet). Env lives in project space.
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
+bash setup/install.sh aurora     # CLONES the frameworks base + pre-caches CPU LLM
 source exercises/aurora/env.sh   # frameworks; conda activate; HF offline; settings
-python -c "from flowcept_academy.util import chat; print(chat('hi'))"
 
-# then submit an exercise (edit -A <project> first)
+# then just submit -- no editing needed
 cd exercises/aurora/06-llm && qsub submit.pbs   # -> runs/06-llm_<date-time>/
 \end{lstlisting}
-  \small \texttt{env.sh} sets \texttt{HF\_HUB\_OFFLINE=1} +
-  \texttt{FLOWCEPT\_TUTORIAL\_LLM=local}, so compute nodes need no network (or use
-  \texttt{ARGO\_USER}). Provenance stays offline; inspect with the same terminal
-  tools --- no images to shuttle around.
+  \small \texttt{install.sh aurora} clones the ALCF \texttt{frameworks} base env
+  (so \texttt{xtb-python} for 07 installs) and caches the CPU model while online;
+  \texttt{env.sh} sets \texttt{HF\_HUB\_OFFLINE=1}, so compute nodes need no network.
+  \textbf{06/07/08} serve a real model on the node's own GPUs via vLLM
+  (\texttt{FLOWCEPT\_USE\_VLLM=0} falls back to the CPU model for 06/08; 07 needs vLLM
+  or Argo for tool calls). Provenance stays offline --- inspect with the same terminal
+  tools, no images to shuttle around.
 \end{frame}
 
 \begin{frame}{Recap}

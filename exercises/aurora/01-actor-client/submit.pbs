@@ -1,7 +1,7 @@
 #!/bin/bash -l
 # PBS submission for exercise 01 (01-actor-client) on Aurora (ALCF).
-# Project is ATPESC; then:  qsub submit.pbs
-#PBS -A ATPESC
+# Project is ATPESC2026; then:  qsub submit.pbs
+#PBS -A ATPESC2026
 #PBS -q debug
 #PBS -l select=1:ncpus=208
 #PBS -l walltime=00:20:00

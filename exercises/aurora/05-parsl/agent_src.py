@@ -14,7 +14,8 @@ interchange process + worker pool over local ports. That does not start on a
 plain laptop (it hangs in ``parsl.load``), so the LOCAL copy uses Parsl's
 ``ThreadPoolExecutor`` instead. This is the same category of infrastructure swap
 as Redis->Local exchange: the real Parsl ``@python_app`` and the agent logic are
-untouched -- only WHERE the task runs changes. The Aurora copy keeps HTEX.
+untouched -- only WHERE the task runs changes. The Aurora copy is identical: these
+exercises run on a single CPU node, so both use ``ThreadPoolExecutor``.
 """
 from __future__ import annotations
 

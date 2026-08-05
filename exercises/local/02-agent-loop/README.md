@@ -2,8 +2,8 @@
 
 **Shows:** autonomous @loop events
 
-What it does: a `Counter` agent with an autonomous `@loop` (`ticker`) that
-increments itself every 0.5s in the background; the client just reads the count.
+What it does: a `Counter` agent with an autonomous `@loop` (`increment`) that
+increments itself every second in the background; the client just reads the count.
 
 What the provenance reveals:
   - `academy_loop` records for the loop's **start** and **exit**, sharing a

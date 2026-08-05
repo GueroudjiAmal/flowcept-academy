@@ -29,7 +29,7 @@ Each run writes to its own `runs/05-parsl_<date-time>/` (buffer, perf CSV, and t
 | 4 | `provenance_card(...)` | `05-parsl_card.md` in the run dir (Flowcept's markdown card) |
 | 5 | `query.py runs/05-parsl_*` | natural-language questions -> pandas |
 
-On Aurora, submit the job (`submit.pbs` already has `-A ATPESC`):
+On Aurora, submit the job (`submit.pbs` already has `-A ATPESC2026`):
 
 ```bash
 qsub submit.pbs         # runs solution.py on a compute node

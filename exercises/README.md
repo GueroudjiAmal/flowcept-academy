@@ -31,8 +31,10 @@ shared `env.sh`.
 | 08 | discussion | multi-agent LLM group chat | LLM |
 
 Examples 06–08 call a real LLM, chosen in priority order: **Argo** if `ARGO_USER`
-is set, else **OpenAI** if `OPENAI_API_KEY` is set, else a **local CPU model**
-(Hugging Face, offline). There is no mock — see the repo [README](../README.md).
+is set, else a **vLLM** server if `VLLM_BASE_URL`/`OPENAI_BASE_URL` is set (the Aurora
+path — a model served on the node's own GPUs), else **OpenAI** if `OPENAI_API_KEY` is
+set, else a **local CPU model** (Hugging Face, offline). `FLOWCEPT_TUTORIAL_LLM` forces
+one of these. There is no mock — see the repo [README](../README.md).
 
 ## The steps (same in every example)
 

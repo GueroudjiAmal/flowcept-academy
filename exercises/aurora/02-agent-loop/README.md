@@ -2,8 +2,8 @@
 
 **Shows:** autonomous @loop events
 
-What it does: a `Counter` agent with an autonomous `@loop` (`ticker`) that
-increments itself every 0.5s in the background; the client just reads the count.
+What it does: a `Counter` agent with an autonomous `@loop` (`increment`) that
+increments itself every second in the background; the client just reads the count.
 
 What the provenance reveals:
   - `academy_loop` records for the loop's **start** and **exit**, sharing a
@@ -30,7 +30,7 @@ Each run writes to its own `runs/02-agent-loop_<date-time>/` (buffer, perf CSV, 
 | 4 | `provenance_card(...)` | `02-agent-loop_card.md` in the run dir (Flowcept's markdown card) |
 | 5 | `query.py runs/02-agent-loop_*` | natural-language questions -> pandas |
 
-On Aurora, submit the job (`submit.pbs` already has `-A ATPESC`):
+On Aurora, submit the job (`submit.pbs` already has `-A ATPESC2026`):
 
 ```bash
 qsub submit.pbs         # runs solution.py on a compute node

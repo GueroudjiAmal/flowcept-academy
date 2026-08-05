@@ -3,13 +3,13 @@
 **Shows:** agent lifecycle + actions
 
 What it does: launches one stateful `Counter` agent and, from a client, calls its
-`@action`s (`increment`, `increment(10)`, `get_count`). No LLM, no other agents.
+`@action`s (`get_count`, `increment`, `get_count`). No LLM, no other agents.
 
 What the provenance reveals:
   - agent lifecycle: `academy_lifecycle` startup/shutdown records for the agent.
   - one `academy_action` per call, each with `used` (inputs) and `generated`
-    (outputs) -- so you can watch the state evolve: increment -> increment(10)
-    -> get_count = 11, every call marked status=FINISHED.
+    (outputs) -- so you can watch the state evolve: get_count=0 -> increment
+    -> get_count=1, every call marked status=FINISHED.
   - the simplest possible capture: this is the baseline the other examples build on.
 
 ## Steps (aurora)
@@ -29,7 +29,7 @@ Each run writes to its own `runs/01-actor-client_<date-time>/` (buffer, perf CSV
 | 4 | `provenance_card(...)` | `01-actor-client_card.md` in the run dir (Flowcept's markdown card) |
 | 5 | `query.py runs/01-actor-client_*` | natural-language questions -> pandas |
 
-On Aurora, submit the job (`submit.pbs` already has `-A ATPESC`):
+On Aurora, submit the job (`submit.pbs` already has `-A ATPESC2026`):
 
 ```bash
 qsub submit.pbs         # runs solution.py on a compute node
