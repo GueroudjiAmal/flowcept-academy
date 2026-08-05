@@ -31,8 +31,8 @@
 \lstdefinestyle{sh}{language=bash,basicstyle=\ttfamily\scriptsize,
   backgroundcolor=\color{fccode},breaklines=true}
 
-\title{Capturing Provenance of Academy Examples with Flowcept}
-\subtitle{A 1-hour, hands-on tutorial --- CPU-friendly, Argo/vLLM/OpenAI/local LLM}
+\title{Capturing Provenance of Academy Agents with Flowcept}
+\subtitle{Hands-on tutorial for ATPESC 2024}
 \author{Amal Gueroudji}
 \date{ATPESC}
 \institute{Argonne National Laboratory}
@@ -41,8 +41,121 @@
 
 \maketitle
 
-\begin{frame}{What we'll do}
-  Take the \textbf{stock Academy examples}, instrument each with \textbf{Flowcept}
+% =====================================================================
+\section{Provenance --- another kind of data}
+
+\begin{frame}{Provenance: another kind of data}
+  Alongside the inputs and results a workflow produces, there is \textbf{another kind
+  of data} worth keeping: \alert{provenance} --- the recorded history of \emph{what
+  ran, on what, producing what, when, where, and how it all connects}.
+  \vspace{0.5em}
+  \begin{itemize}
+    \item It is newly \textbf{essential} because of AI: \alert{agentic workflows are
+      non-deterministic} --- the same prompt yields different outputs, and the control
+      flow is \emph{decided at runtime}, not written in your source.
+    \item Without that record an AI run is \emph{not reproducible} and its failures are
+      \emph{invisible} --- you cannot say what the agent actually did.
+  \end{itemize}
+  \vspace{0.3em}
+  \centering In this session we \textbf{capture and study provenance with
+  \alert{Flowcept}}, on agentic workflows built with \alert{Academy}.
+\end{frame}
+
+\begin{frame}{Why capture provenance at all?}
+  Provenance = the recorded history of \emph{what ran, on what inputs, producing
+  what outputs, when, where, and how it all connects}.
+  \vspace{0.5em}
+  \begin{itemize}
+    \item \textbf{Reproducibility} --- rerun and get the same result; know exactly
+      what code, data, and parameters produced a number.
+    \item \textbf{Debugging} --- when something breaks, see \emph{which} step failed,
+      on \emph{what} input, and why --- not just a stack trace.
+    \item \textbf{Trust \& audit} --- verify and defend results; a scientific claim
+      is only as good as the record behind it.
+    \item \textbf{Cost \& performance} --- see where time and tokens go.
+  \end{itemize}
+  \vspace{0.3em}
+  \small For classic HPC workflows this is valuable. For \alert{agentic} systems it
+  becomes \alert{essential} --- next slide.
+\end{frame}
+
+\begin{frame}{Why it matters \emph{more} for agentic systems}
+  Traditional code does what you wrote. \textbf{Agents decide what to do at
+  runtime} --- so the ``what happened'' isn't in your source.
+  \begin{itemize}\footnotesize
+    \item \textbf{Non-determinism.} LLM calls sample --- you can't reproduce a run
+      without the actual prompt, response, model, and tokens.
+    \item \textbf{Autonomy \& emergence.} \texttt{@loop}s act on their own; agents
+      choose which tool/peer to call. The control flow is \emph{decided}, not
+      declared --- capture is the only record of the real path.
+    \item \textbf{Distribution.} Work spans agents, processes, nodes, and
+      \emph{frameworks} (Academy + LangGraph + Parsl); lineage across those
+      boundaries is invisible without provenance.
+    \item \textbf{Opaque reasoning.} Prompts, tool calls, and delegations bury the
+      ``why.'' Provenance keeps every prompt/response.
+    \item \textbf{Failure is normal.} Small LLMs propose malformed inputs; agents
+      derail mid-plan --- you need the exact failing step + input.
+  \end{itemize}
+  \centering\footnotesize\alert{Non-deterministic, autonomous, distributed ---
+  exactly the case provenance was made for.}
+\end{frame}
+
+% =====================================================================
+\section{The tools --- Flowcept + Academy}
+
+\begin{frame}{What is Flowcept?}
+  \textbf{Flowcept} is a runtime \textbf{provenance capture} system: it records
+  \emph{what ran, with what inputs/outputs, when, and how it connects} --- the
+  provenance graph.
+  \vspace{0.3em}
+  \begin{itemize}
+    \item \textbf{Data model}: \texttt{campaign} $\to$ \texttt{workflow} $\to$
+      \texttt{task} (action / loop / llm\_call), with \texttt{used}/\texttt{generated}
+      and \texttt{parent\_task\_id} lineage.
+    \item Its \emph{agentic} plugin patches Academy's \texttt{Runtime}, so capture is
+      \alert{automatic --- zero changes to agent logic}.
+    \item Runs \textbf{offline} here (no Redis / no Mongo): records land in a per-run
+      \texttt{flowcept\_buffer.jsonl}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{What is Academy?}
+  A framework for \textbf{distributed multi-agent systems} for science --- these are
+  the agentic workflows we instrument (unchanged).
+  \begin{itemize}
+    \item \texttt{Agent} --- a class holding state + behaviors
+    \item \texttt{@action} --- a callable behavior (request/response)
+    \item \texttt{@loop} --- autonomous background behavior
+    \item \texttt{Handle} --- a remote reference to an agent
+    \item \texttt{Manager} + \texttt{Exchange} --- launch agents \& route messages
+  \end{itemize}
+  \vspace{0.3em}
+  \small Scales from local threads $\to$ processes $\to$ Globus Compute / Parsl across nodes.
+\end{frame}
+
+\begin{frame}[fragile]{Academy: the shape of an agent}
+\begin{lstlisting}
+class Coordinator(Agent):
+    @action
+    async def process(self, text: str) -> str:
+        text = await self.lowerer.lower(text)      # cross-agent call
+        return await self.reverser.reverse(text)   # cross-agent call
+
+async with await Manager.from_exchange_factory(
+        factory=LocalExchangeFactory(),
+        executors=ThreadPoolExecutor()) as manager:
+    coord = await manager.launch(Coordinator, args=(lo, re))
+    await coord.process("DEADBEEF")     # -> "feebdaed"
+\end{lstlisting}
+  \small These are Academy's own examples
+  (\texttt{github.com/academy-agents/academy}); we instrument them unchanged.
+\end{frame}
+
+% =====================================================================
+\section{The hands-on session}
+
+\begin{frame}{The hands-on session}
+  Take the \textbf{upstream Academy examples}, instrument each with \textbf{Flowcept}
   to capture provenance (\alert{zero changes to agent logic}), and \textbf{inspect}
   what happened --- including \alert{where things fail}.
   \vspace{0.6em}
@@ -50,11 +163,10 @@
     \toprule
     \textbf{Part} & \textbf{Content} \\
     \midrule
-    0 & Why provenance --- and why it matters for \emph{agentic} systems \\
-    1 & Academy in a nutshell (reminder) \\
-    2 & Flowcept + examples 1, 2, 3 --- and how to inspect provenance \\
-    3 & Advanced: agents \& LLMs (examples 6, 8) \\
-    4 & Extra advanced: LangGraph + real xTB (7) + Parsl (5), and failures \\
+    1 & Provenance --- another kind of data, and why agentic makes it essential \\
+    2 & The tools: Flowcept + Academy \\
+    3 & Flowcept + examples 1, 2, 3 --- and how to inspect provenance \\
+    4 & Advanced: agents \& LLMs (6, 8), LangGraph + real xTB (7), Parsl (5), failures \\
     \bottomrule
   \end{tabular}
   \vspace{0.6em}\\
@@ -64,7 +176,7 @@
 \end{frame}
 
 \begin{frame}[fragile]{How the tutorial is laid out}
-  Eight stock Academy examples, each a \textbf{step-by-step exercise}. As shipped
+  Eight upstream Academy examples, each a \textbf{step-by-step exercise}. As shipped
   each one \emph{runs but records nothing}; you turn provenance on one \textbf{STEP}
   at a time by uncommenting a block and re-running.
 \begin{lstlisting}[style=sh]
@@ -96,104 +208,7 @@ cd exercises/local/01-actor-client && python exercise.py
 \end{frame}
 
 % =====================================================================
-\section{Why provenance?}
-
-\begin{frame}{Why capture provenance at all?}
-  Provenance = the recorded history of \emph{what ran, on what inputs, producing
-  what outputs, when, where, and how it all connects}.
-  \vspace{0.5em}
-  \begin{itemize}
-    \item \textbf{Reproducibility} --- rerun and get the same result; know exactly
-      what code, data, and parameters produced a number.
-    \item \textbf{Debugging} --- when something breaks, see \emph{which} step failed,
-      on \emph{what} input, and why --- not just a stack trace.
-    \item \textbf{Trust \& audit} --- verify and defend results; a scientific claim
-      is only as good as the record behind it.
-    \item \textbf{Cost \& performance} --- see where time and tokens go.
-  \end{itemize}
-  \vspace{0.3em}
-  \small For classic HPC workflows this is valuable. For \alert{agentic} systems it
-  becomes \alert{essential} --- next slide.
-\end{frame}
-
-\begin{frame}{Why it matters \emph{more} for agentic systems}
-  Traditional code does what you wrote. \textbf{Agents decide what to do at
-  runtime} --- so the ``what happened'' isn't in your source.
-  \vspace{0.4em}
-  \begin{itemize}\small
-    \item \textbf{Non-determinism.} LLM calls sample --- the same prompt yields
-      different outputs. You \emph{cannot} reproduce a run without recording the
-      actual prompt, response, model, and tokens.
-    \item \textbf{Autonomy \& emergence.} \texttt{@loop}s act on their own; agents
-      choose which tool/peer to call. The control flow is \emph{decided}, not
-      declared --- capture is the only way to know the real path taken.
-    \item \textbf{Distribution across boundaries.} Work spans agents, processes,
-      nodes, and \emph{frameworks} (Academy + LangGraph + Parsl). Lineage that
-      crosses those boundaries is invisible without provenance.
-    \item \textbf{Opaque reasoning.} Prompts, tool calls, and delegations bury the
-      ``why.'' Provenance keeps every prompt/response --- the audit trail.
-    \item \textbf{Failure is normal.} Small LLMs propose malformed inputs; agents
-      derail mid-plan. You need the exact failing step + input.
-  \end{itemize}
-  \centering\small\alert{Agents are non-deterministic, autonomous, and
-  distributed --- exactly the case provenance was made for.}
-\end{frame}
-
-% =====================================================================
-\section{Part 1 --- Academy, a reminder}
-
-\begin{frame}{Academy in a nutshell}
-  A framework for \textbf{distributed multi-agent systems} for science.
-  \begin{itemize}
-    \item \texttt{Agent} --- a class holding state + behaviors
-    \item \texttt{@action} --- a callable behavior (request/response)
-    \item \texttt{@loop} --- autonomous background behavior
-    \item \texttt{Handle} --- a remote reference to an agent
-    \item \texttt{Manager} + \texttt{Exchange} --- launch agents \& route messages
-  \end{itemize}
-  \vspace{0.4em}
-  Scales from local threads $\to$ processes $\to$ Globus Compute / Parsl across nodes.
-\end{frame}
-
-\begin{frame}[fragile]{Academy: the shape of an agent}
-\begin{lstlisting}
-class Coordinator(Agent):
-    @action
-    async def process(self, text: str) -> str:
-        text = await self.lowerer.lower(text)      # cross-agent call
-        return await self.reverser.reverse(text)   # cross-agent call
-
-async with await Manager.from_exchange_factory(
-        factory=LocalExchangeFactory(),
-        executors=ThreadPoolExecutor()) as manager:
-    coord = await manager.launch(Coordinator, args=(lo, re))
-    await coord.process("DEADBEEF")     # -> "feebdaed"
-\end{lstlisting}
-  \small These are Academy's own examples
-  (\texttt{github.com/academy-agents/academy}); we instrument them unchanged.
-\end{frame}
-
-% =====================================================================
-\section{Part 2 --- Flowcept + examples 1, 2, 3}
-
-\begin{frame}{Flowcept: provenance, one line to capture}
-  \textbf{Flowcept} records \emph{what ran, with what inputs/outputs, when, and how
-  it connects} --- the provenance graph. Its \emph{agentic} plugin patches Academy's
-  \texttt{Runtime}, so capture is automatic.
-  \vspace{0.4em}
-  \begin{columns}[T]
-    \begin{column}{0.52\textwidth}
-      \small Model: \texttt{campaign} $\to$ \texttt{workflow} $\to$ \texttt{task}
-      (action / loop / llm\_call), with \texttt{used}/\texttt{generated} and
-      \texttt{parent\_task\_id} lineage.
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{exampleblock}{Zero agent-code changes}\small
-        Wrap the run; the plugin does the rest.
-      \end{exampleblock}
-    \end{column}
-  \end{columns}
-\end{frame}
+\section{Capture + inspect --- examples 1, 2, 3}
 
 \begin{frame}[fragile]{Turn capture on --- STEP 1}
 \begin{lstlisting}
@@ -202,7 +217,7 @@ from flowcept_academy.util import capture_run    # -> runs/<id>_<date-time>/
 
 with capture_run("03-agent-agent") as run_dir:
     with captured(workflow_name="03-agent-agent"):
-        result = asyncio.run(run())    # the stock example, now captured
+        result = asyncio.run(run())    # the upstream example, now captured
     # -> flowcept_buffer.jsonl in run_dir  (offline: no Redis / no Mongo)
 \end{lstlisting}
   \small In the exercise you just uncomment this block and re-run. Everything a run
@@ -269,10 +284,10 @@ python ../../../provenance/query.py runs/03-agent-agent_* --ask "show the cross-
 \end{frame}
 
 % =====================================================================
-\section{Part 3 --- Advanced: agents \& LLMs}
+\section{Advanced --- agents \& LLMs}
 
 \begin{frame}{LLM backend: Argo $\to$ vLLM $\to$ OpenAI $\to$ local CPU model}
-  \begin{itemize}
+  \begin{itemize}\small
     \item \texttt{ARGO\_USER} set $\to$ \alert{ANL Argo gateway} (on Aurora / ANL network), native tool calling
     \item else \texttt{VLLM\_BASE\_URL}/\texttt{OPENAI\_BASE\_URL} set $\to$ \alert{vLLM}
       server we run (\texttt{VLLM\_MODEL}); native tool calling when launched with
@@ -331,14 +346,13 @@ result = await agent.ainvoke({"messages": [("user", question)]})
 \end{frame}
 
 % =====================================================================
-\section{Part 4 --- Extra advanced \& failures}
+\section{Extra advanced --- failures}
 
 \begin{frame}[fragile]{Example 7: cross-framework (Academy + LangGraph + real xTB)}
   The upstream \texttt{mol\_design\_agents.py}, \alert{unchanged}: a LangGraph
   \texttt{StateGraph} (plan $\to$ tool\_calling $\to$ simulate $\to$ conclude $\to$
   critique $\to$ update, looping) runs inside an Academy \texttt{@loop}, and
   \texttt{simulate} calls \textbf{real GFN2-xTB} (RDKit $\to$ ASE $\to$ xtb).
-  \vspace{0.3em}
   \begin{itemize}\small
     \item \textbf{one shared \texttt{campaign\_id}} across both plugins (Academy + LangGraph)
     \item three layers in one lineage: \texttt{academy\_loop} $\to$
@@ -352,7 +366,6 @@ result = await agent.ainvoke({"messages": [("user", question)]})
          conclude, critique, update
 * real xTB ionization energies (charged - neutral, eV):
     simulate -> 13.1975...    simulate -> 14.1156...
-* llm_call model=gpt-4o-2024-11-20  parent=tool_calling
 \end{lstlisting}
 \end{frame}
 
@@ -385,50 +398,37 @@ class SimulationAgent(Agent):
       stderr: Parse failure for C6H5NC(N)=O
     ... (8 xTB parse failures + 1 propagated langgraph_node)
 \end{lstlisting}
-  \small You see \emph{which} molecule the LLM invented, that xTB rejected it, and
-  that the successful runs still gave real energies (13.20, 14.12 eV) --- the
-  debugging payoff, and the reason agentic runs need this most.
+  \small You see \emph{which} molecule the LLM invented, that xTB rejected it, and that
+  successful runs still gave real energies (13.20, 14.12 eV) --- the debugging payoff.
 \end{frame}
 
 \begin{frame}[fragile]{Running on Aurora (offline, terminal-only)}
-  Each example under \texttt{exercises/aurora/<id>/} has its own \texttt{submit.pbs}
-  (\texttt{-A ATPESC2026} already set); all share \texttt{exercises/aurora/env.sh}
-  (modules + conda env + offline LLM + settings).
+  Each \texttt{exercises/aurora/<id>/} has its own \texttt{submit.pbs}
+  (\texttt{-A ATPESC2026}); all share \texttt{env.sh} (modules + conda + offline LLM).
 \begin{lstlisting}[style=sh]
-# once, on a login node. Env lives in project space. No model download.
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
-bash setup/install.sh aurora     # clones the frameworks base + delta (no LLM download)
-source exercises/aurora/env.sh   # frameworks; conda activate --stack; HF offline
-
-# then just submit -- no editing needed (submit.pbs brings vLLM up on the node)
-cd exercises/aurora/06-llm && qsub submit.pbs   # -> runs/06-llm_<date-time>/
+bash setup/install.sh aurora     # frameworks base + delta, no LLM download
+source exercises/aurora/env.sh   # modules + conda --stack + HF offline
+cd exercises/aurora/06-llm && qsub submit.pbs   # submit.pbs starts vLLM on the node
 \end{lstlisting}
-  \small \texttt{install.sh aurora} stacks a small delta on the ALCF \texttt{frameworks}
-  module (which ships the tuned XPU \texttt{vllm}); nothing is downloaded. All LLM usage
-  reads ALCF's staged hub at \texttt{/flare/datasets/model-weights} --- \texttt{env.sh}
-  points \texttt{HF\_HOME} there and sets \texttt{HF\_HUB\_OFFLINE=1}, so compute nodes
-  need no network. \textbf{vLLM is the only LLM backend on Aurora} ---
-  \textbf{06/07/08}'s \texttt{submit.pbs} serve \texttt{Llama-3.1-8B-Instruct} on the
-  node's own GPUs via \texttt{source ../vllm\_serve.sh \&\& vllm\_start}. \alert{No CPU
-  fallback}: \texttt{FLOWCEPT\_USE\_VLLM=0} means you must use Argo instead
-  (\texttt{ARGO\_USER=...}). Provenance stays offline --- inspect with the same terminal
-  tools, no images to shuttle around.
+  \small \texttt{install.sh aurora} adds a small delta on the \texttt{frameworks} module
+  (nothing downloaded); all LLM usage reads ALCF's staged hub offline
+  (\texttt{HF\_HOME}=\texttt{/flare/datasets/model-weights}, \texttt{HF\_HUB\_OFFLINE=1}).
+  \textbf{vLLM is the only backend} --- each \texttt{submit.pbs} starts it on the node
+  (\alert{no CPU fallback}; \texttt{FLOWCEPT\_USE\_VLLM=0} $\to$ Argo). Details next slide.
 \end{frame}
 
 \begin{frame}[fragile]{vLLM on Aurora: serve it yourself (+ interactive)}
-  \texttt{vllm\_start} does more than launch a server. On Aurora's XPU, \texttt{vllm
-  serve} normally \alert{SIGSEGVs} inspecting the model architecture (a subprocess
-  crash surfaced as ``\texttt{architectures ['LlamaForCausalLM'] failed to be
-  inspected}''). We dodge it: \texttt{vllm\_start} first \textbf{primes the modelinfo
-  cache in-process} (loads the model \emph{class}, no weights, no subprocess), then
-  serves against the cache --- \alert{handled automatically}, nothing to do by hand.
-  \vspace{0.3em}
-  \begin{itemize}\small
-    \item \textbf{Adopt-on-source}: sourcing \texttt{vllm\_serve.sh} in a \emph{fresh}
-      shell detects an already-running server and re-exports \texttt{VLLM\_BASE\_URL}
-      --- so \texttt{query.py --ask} routes to it without relaunching.
-    \item \textbf{Context window}: \texttt{VLLM\_MAX\_MODEL\_LEN=32768} (8192 was too
-      tight --- 08's group chat accumulates the whole discussion and overflowed it).
+  \small On Aurora's XPU, \texttt{vllm serve} normally \alert{SIGSEGVs} inspecting the
+  model architecture. \texttt{vllm\_start} dodges it: it \textbf{primes the modelinfo
+  cache in-process} (model \emph{class} only --- no weights, no subprocess), then serves
+  against the cache. \alert{Automatic}, nothing to do by hand.
+  \begin{itemize}\footnotesize
+    \item \textbf{Adopt-on-source}: sourcing \texttt{vllm\_serve.sh} in a fresh shell
+      finds a running server + re-exports \texttt{VLLM\_BASE\_URL} (so \texttt{query.py
+      --ask} routes to it).
+    \item \textbf{Context}: \texttt{VLLM\_MAX\_MODEL\_LEN=32768} (8192 overflowed ---
+      08's group chat accumulates the whole discussion).
   \end{itemize}
 \begin{lstlisting}[style=sh]
 qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=60:00   # interactive node
