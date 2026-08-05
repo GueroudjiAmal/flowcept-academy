@@ -5,8 +5,10 @@ GFN2-xTB chemistry (`rdkit` + `xtb-python`, conda-forge only), so everything use
 conda — no venv, no per-exercise env.
 
 `setup/install.sh` has two modes; with no argument it picks `aurora` when
-`/soft/modulefiles` exists and `local` otherwise. Both run `conda env create -f
-setup/environment.yml` then `pip install -e .`, and re-running reuses an existing env.
+`/soft/modulefiles` exists and `local` otherwise. `local` builds a self-contained env
+from `setup/environment.yml`; `aurora` instead **clones the `frameworks` base conda
+env** and layers the delta on top (the ALCF-recommended pattern — see below). Both
+then `pip install -e .`, and re-running reuses an existing env.
 
 ## `local` — laptop / workstation
 
@@ -20,18 +22,21 @@ export FLOWCEPT_SETTINGS_PATH=$PWD/setup/flowcept_settings.yaml
 
 ## `aurora` — ALCF Aurora
 
-Follows the [ALCF Python-on-Aurora docs](https://docs.alcf.anl.gov/aurora/data-science/python/):
-conda comes from the `frameworks` module, and the env is built at an explicit
-`--prefix` rather than by name. Run this on a **login node** (compute nodes have no
-internet):
+Follows the ALCF ["Cloning the base Anaconda environment"](https://docs.alcf.anl.gov/polaris/data-science/python/#cloning-the-base-anaconda-environment)
+recipe: `conda` comes from the `frameworks` module, and `install.sh aurora` **clones
+that base env** into an explicit `--prefix`, then adds the tutorial delta — exercise
+07's chemistry (`xtb-python`/`rdkit`/`ase`) from conda-forge, the rest via pip
+(`setup/requirements-aurora.txt`). Cloning (rather than a venv on the module) keeps us
+in conda so `xtb-python` installs — there is no PyPI `xtb` wheel for the base's Python
+3.12. Run this on a **login node** (compute nodes have no internet):
 
 ```bash
-# point the env at project space -- torch + transformers + rdkit + xtb run to
-# several GB, which will blow through your home quota (check with `myquota`)
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/$USER/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/<project>/$USER/hf_cache     # model cache, same reason
+# point the env at project space -- a clone of the base is many GB and will blow
+# through your home quota (check with `myquota`). ALCF warns the clone is slow.
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache     # model cache, same reason
 
-bash setup/install.sh aurora
+bash setup/install.sh aurora    # also pre-caches the offline CPU LLM (login node, online)
 ```
 
 Put both exports in your `~/.bashrc` so batch jobs see them —
@@ -49,8 +54,8 @@ Add `--shared` and point the prefix at group-writable project space instead of a
 `$USER` directory:
 
 ```bash
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/shared/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/<project>/shared/hf_cache
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy
+export HF_HOME=/lus/flare/projects/ATPESC/shared/hf_cache
 bash setup/install.sh aurora --shared
 ```
 
@@ -59,8 +64,9 @@ group-writable, and the tutorial library is installed non-editable so it does no
 depend on the builder's clone. Everyone else exports the same two variables and skips
 the installer entirely.
 
-See [`exercises/aurora/README.md`](../exercises/aurora/README.md) for pre-caching the
-LLM, the shared-env details, and submitting jobs.
+See [`exercises/aurora/README.md`](../exercises/aurora/README.md) for the shared-env
+details, the offline LLM cache (pre-cached automatically by `install.sh`), and
+submitting jobs.
 
 `flowcept_settings.yaml` is the **offline** profile: provenance is written to a
 JSONL buffer — no Redis/Mongo needed. Each run writes its `flowcept_buffer.jsonl`,

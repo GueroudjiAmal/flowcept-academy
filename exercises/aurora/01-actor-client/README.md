@@ -29,7 +29,7 @@ Each run writes to its own `runs/01-actor-client_<date-time>/` (buffer, perf CSV
 | 4 | `provenance_card(...)` | `01-actor-client_card.md` in the run dir (Flowcept's markdown card) |
 | 5 | `query.py runs/01-actor-client_*` | natural-language questions -> pandas |
 
-On Aurora, submit the job (edit `-A <project>` first):
+On Aurora, submit the job (`submit.pbs` already has `-A ATPESC`):
 
 ```bash
 qsub submit.pbs         # runs solution.py on a compute node

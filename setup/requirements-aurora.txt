@@ -1,0 +1,28 @@
+# Aurora pip delta -- installed ON TOP of a CLONE of the ALCF `frameworks` base conda
+# env (the ALCF "Cloning the base Anaconda environment" recipe; see setup/install.sh
+# aurora), NOT a venv.
+#
+# The cloned base already provides XPU-optimized torch, vLLM, Ray, dpctl, numpy, pandas
+# (plus, usually, transformers/huggingface_hub/requests/pyyaml). pip SKIPS anything the
+# clone already satisfies, so this list is only what the tutorial adds. We deliberately
+# do NOT list torch / numpy / pandas / vllm -- they must come from the clone (the tuned
+# XPU builds), not PyPI.
+#
+# The real-chemistry stack for exercise 07 (xtb-python, rdkit, ase) is installed
+# separately in install.sh from CONDA-FORGE -- xtb has no PyPI wheel for the base's
+# Python 3.12, but conda-forge does. See setup/install.sh and exercises/aurora/README.md.
+
+academy-py
+flowcept[agents] @ git+https://github.com/GueroudjiAmal/flowcept.git@agentic
+parsl
+langgraph
+langchain>=1.0
+langchain-core
+langchain-openai
+langchain-huggingface
+transformers
+huggingface_hub
+nest_asyncio
+py-cpuinfo
+pyyaml
+requests

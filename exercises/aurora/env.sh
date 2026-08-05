@@ -9,7 +9,7 @@
 # Per the ALCF Python-on-Aurora docs the env lives at an explicit --prefix, not a
 # name. Export the SAME FLOWCEPT_ENV_PREFIX you used at install time (put it in your
 # ~/.bashrc so batch jobs see it too); otherwise this falls back to $REPO/envs/.
-#   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/$USER/envs/flowcept-academy
+#   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
 
 # This file must be SOURCED, not executed. It runs `conda activate` and `export`s
 # INTO your shell; `bash env.sh` runs in a subshell where those changes die on exit
@@ -49,7 +49,7 @@ conda activate "$ENV_PREFIX" 2>/dev/null || true
 if [[ ! -d "$ENV_PREFIX/conda-meta" ]]; then
     echo "!! no conda env at $ENV_PREFIX"
     echo "!! If your project has a SHARED env, just point at it (and add this to ~/.bashrc):"
-    echo "!!     export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/shared/envs/flowcept-academy"
+    echo "!!     export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/shared/envs/flowcept-academy"
     echo "!! Otherwise build your own:  bash setup/install.sh aurora"
 fi
 
@@ -59,12 +59,15 @@ fi
 #   export ONEAPI_DEVICE_SELECTOR=level_zero:gpu
 
 # --- LLM: local CPU model, fully offline -----------------------------------
-# Pre-cache the model on a login node first (has internet):
-#   python -c "from flowcept_academy.util import chat; print(chat('hi'))"
-# then compute nodes read it from HF_HOME with HF_HUB_OFFLINE=1.
-# Keep this off your home quota too -- set HF_HOME next to the env if the repo
-# itself lives in $HOME:
-#   export HF_HOME=/lus/flare/projects/<project>/$USER/hf_cache
+# `setup/install.sh aurora` already pre-cached this model into HF_HOME on a login
+# node (with internet); here we just point at that cache and force offline so the
+# compute nodes never touch the network. If you ever need to re-cache by hand, do it
+# from a login node with the flags EXPLICITLY overriding this file's offline setting:
+#   HF_HOME=$HF_HOME HF_HUB_OFFLINE=0 FLOWCEPT_TUTORIAL_LLM=local \
+#     python -c "from flowcept_academy.util import chat; chat('hi')"
+# (Sourcing this file first would set HF_HUB_OFFLINE=1 and the download would fail.)
+# Keep the cache off your home quota -- set HF_HOME next to the env if the repo lives
+# in $HOME:  export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache
 export HF_HOME="${HF_HOME:-$REPO/hf_cache}"
 export HF_HUB_OFFLINE=1
 export FLOWCEPT_TUTORIAL_LLM=local

@@ -30,7 +30,7 @@ Each run writes to its own `runs/02-agent-loop_<date-time>/` (buffer, perf CSV, 
 | 4 | `provenance_card(...)` | `02-agent-loop_card.md` in the run dir (Flowcept's markdown card) |
 | 5 | `query.py runs/02-agent-loop_*` | natural-language questions -> pandas |
 
-On Aurora, submit the job (edit `-A <project>` first):
+On Aurora, submit the job (`submit.pbs` already has `-A ATPESC`):
 
 ```bash
 qsub submit.pbs         # runs solution.py on a compute node

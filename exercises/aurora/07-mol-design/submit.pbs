@@ -1,7 +1,7 @@
 #!/bin/bash -l
 # PBS submission for exercise 07 (07-mol-design) on Aurora (ALCF).
-# Edit -A <project>, then:  qsub submit.pbs
-#PBS -A <project>
+# Project is ATPESC; then:  qsub submit.pbs
+#PBS -A ATPESC
 #PBS -q debug
 #PBS -l select=1:ncpus=208
 #PBS -l walltime=01:00:00
@@ -14,7 +14,8 @@ cd "$PBS_O_WORKDIR"
 source ../env.sh                 # one conda env (rdkit+ase+xtb + agents/LLM) + Flowcept settings
 
 # 07's LangGraph tool_calling node NEEDS a model that emits real tool calls, so
-# unlike 06/08 this is not optional: the CPU 0.5B fallback would retry forever.
+# unlike 06/08 this is not optional: the CPU 0.5B fallback retries only a few times
+# (~3) and then fails, because it never produces a parseable tool call.
 # vllm_start serves Qwen2.5-7B with --enable-auto-tool-choice on this node's GPUs.
 # (If you do have Argo reachability, `export ARGO_USER=... FLOWCEPT_USE_VLLM=0`.)
 if [[ "${FLOWCEPT_USE_VLLM:-1}" == 1 ]]; then

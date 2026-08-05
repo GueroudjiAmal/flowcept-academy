@@ -25,17 +25,18 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
 1. **One-time, on a login node** (login nodes have internet; compute nodes do not):
 
    ```bash
-   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/<project>/$USER/envs/flowcept-academy
-   export HF_HOME=/lus/flare/projects/<project>/$USER/hf_cache   # add both to ~/.bashrc
-   bash setup/install.sh aurora
+   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC/$USER/envs/flowcept-academy
+   export HF_HOME=/lus/flare/projects/ATPESC/$USER/hf_cache   # add both to ~/.bashrc
+   bash setup/install.sh aurora     # clones the frameworks base + delta; pre-caches the CPU LLM
    source exercises/aurora/env.sh
-   python -c "from flowcept_academy.util import chat; print(chat('hi'))"   # pre-cache the CPU model
    ```
 
-   For the LLM examples (06/07/08) also populate vLLM's modelinfo cache once — see
-   *"One-time: populate vLLM's modelinfo cache"* in the Aurora README.
+   `install.sh` pre-caches the offline CPU fallback model for you (on the login node,
+   which has internet), so there is no manual `chat('hi')` step. For the LLM examples
+   (06/07/08) also populate vLLM's modelinfo cache once — see *"One-time: populate
+   vLLM's modelinfo cache"* in the Aurora README.
 
-2. **Submit an example** (edit `-A <project>` in its `submit.pbs` first):
+2. **Submit an example** (`submit.pbs` already has `-A ATPESC`):
 
    ```bash
    cd exercises/aurora/01-actor-client && qsub submit.pbs
@@ -58,7 +59,7 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    ```
 
 To work through `exercise.py` STEP by STEP interactively, grab a node
-(`qsub -I -A <project> -q debug -l select=1 -l walltime=00:30:00 -l filesystems=home:flare`),
+(`qsub -I -A ATPESC -q debug -l select=1 -l walltime=00:30:00 -l filesystems=home:flare`),
 `source ../env.sh`, and — for 06/07/08 — `source ../vllm_serve.sh && vllm_start`
 before running. Everything below then applies verbatim; just read `runs/<id>_*` from
 the compute-node run.

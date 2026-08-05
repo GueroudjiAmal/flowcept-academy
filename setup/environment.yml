@@ -1,11 +1,16 @@
-# ONE conda environment for the ENTIRE tutorial (all 8 exercises).
+# ONE conda environment for the ENTIRE tutorial (all 8 exercises) -- the LOCAL /
+# LAPTOP path only (a machine WITHOUT the ALCF `frameworks` module).
 #
-# Everything runs in this single env -- there is no separate venv and no
-# per-exercise env. Example 07 is the only one that needs real GFN2-xTB chemistry
-# (rdkit + xtb-python, conda-forge only), so the whole tutorial uses conda to keep
-# one setup for everyone; examples 01-06/08 just ignore the chemistry packages.
+# On Aurora do NOT use this file: `setup/install.sh aurora` instead CLONES the
+# frameworks base conda env and layers the delta on top (conda-forge xtb/rdkit/ase +
+# setup/requirements-aurora.txt) so it inherits the module's XPU-optimized stack. This
+# self-contained env is what `setup/install.sh local` (or a plain laptop) builds.
 #
-# Build (once, on a machine with internet -- e.g. an Aurora login node):
+# Example 07 is the only one that needs real GFN2-xTB chemistry (rdkit + xtb-python,
+# conda-forge only), so the whole tutorial uses conda to keep one setup for everyone;
+# examples 01-06/08 just ignore the chemistry packages.
+#
+# Build (laptop):
 #   conda env create -f setup/environment.yml
 #   conda run -n flowcept-academy pip install -e .
 # Activate:
