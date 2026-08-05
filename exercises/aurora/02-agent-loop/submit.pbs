@@ -10,6 +10,9 @@
 #PBS -j oe
 
 set -euo pipefail
+# PBS sets PBS_O_WORKDIR to the qsub dir; if unset (e.g. the script is run directly,
+# not via qsub) default it to this script's own dir so cd/../env.sh/runs/ still resolve.
+: "${PBS_O_WORKDIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 cd "$PBS_O_WORKDIR"
 source ../env.sh                 # modules + conda env + offline LLM + Flowcept settings
 
