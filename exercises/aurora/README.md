@@ -156,18 +156,49 @@ parseable tool call, so 07 retries a few times (~3) and then fails. Startup cost
 ~2–5 minutes and one GPU tile, which is why 01–05 (no LLM) don't start it — the
 walltime in 06/07/08's `submit.pbs` is already raised to account for it.
 
-### One-time: populate vLLM's modelinfo cache
+### The XPU model-inspection SIGSEGV (handled automatically)
 
-vLLM has a documented first-run bug filling `modelinfos` in `VLLM_CACHE_ROOT`
-(default `~/.cache/vllm`); an unpopulated cache makes the server exit at startup with
-`validation error for ModelConfig`. Fix it once, from a node with proxies set, using
-`vllm_build_all_modelinfo_caches.py` from
-[argonne-lcf/frameworks-sdk](https://github.com/argonne-lcf/frameworks-sdk):
+On Aurora's XPU, `vllm serve` runs a **model-architecture inspection** step that spawns
+a helper subprocess (`python -m vllm.model_executor.models.registry`). That subprocess
+**segfaults (SIGSEGV)**, and vLLM surfaces it as:
 
-```bash
-export VLLM_CACHE_ROOT=/lus/flare/projects/ATPESC2026/prov/vllm_cache   # shared setup
-python vllm_build_all_modelinfo_caches.py
+```
+Model architectures ['LlamaForCausalLM'] failed to be inspected
+... pydantic ... validation error for ModelConfig
 ```
 
-Re-run it any time you move `VLLM_CACHE_ROOT`. `vllm_start` prints a pointer to this
-section if the server dies during startup.
+This is a known frameworks issue — ALCF ships a reproducer + fix in a directory named,
+literally, `xpu-model-inspection-hidden-sigsegv`
+([argonne-lcf/frameworks-sdk](https://github.com/argonne-lcf/frameworks-sdk)). The fix:
+build vLLM's modelinfo cache **in-process** (which never spawns the crashing subprocess),
+then let `vllm serve` reuse it — a cache hit skips inspection entirely.
+
+**You don't run anything by hand.** `vllm_start` primes the cache automatically before
+serving: it reads the served model's architecture from the staged config (offline),
+then runs the vendored builder with the **frameworks** python:
+
+```
+>> priming vLLM modelinfo cache (avoids the XPU inspection SIGSEGV)
+>>   VLLM_CACHE_ROOT=~/.cache/vllm  arch=LlamaForCausalLM
+[OK] LlamaForCausalLM -> vllm.model_executor.models.llama:LlamaForCausalLM
+```
+
+Priming and serving use the same `VLLM_CACHE_ROOT` (default `~/.cache/vllm`; point it at
+project space for a shared setup — it must be **writable**, unlike the read-only
+`HF_HOME` hub). The builder lives at
+[`vllm_wa/vllm_build_all_modelinfo_caches.py`](vllm_wa/vllm_build_all_modelinfo_caches.py)
+(vendored from frameworks-sdk, with `vllm_make_modelinfo_cache.py` and a reproducer).
+
+To prime by hand (e.g. for a shared cache, once per `VLLM_CACHE_ROOT`), use the
+**frameworks** python — the one whose shebang the `vllm` binary carries, not the tutorial
+env's:
+
+```bash
+export VLLM_CACHE_ROOT=/lus/flare/projects/ATPESC2026/prov/vllm_cache   # shared, writable
+"$(sed -n '1s/^#!//p' "$(command -v vllm)")" \
+    vllm_wa/vllm_build_all_modelinfo_caches.py --arch LlamaForCausalLM
+```
+
+> The benign `Permission denied: .../.no_exist/...preprocessor_config.json` lines during
+> startup are HuggingFace failing to write negative-cache markers into the read-only
+> staged hub. vLLM ignores them and continues; they are not the SIGSEGV.

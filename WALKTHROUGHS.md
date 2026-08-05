@@ -35,8 +35,9 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    **Nothing is downloaded.** All LLM usage reads ALCF's read-only staged hub at
    `/flare/datasets/model-weights` (`env.sh` points `HF_HOME` there and forces offline),
    so there is no pre-cache and no `chat('hi')` step — do not export your own `HF_HOME`.
-   For the LLM examples (06/07/08) populate vLLM's modelinfo cache once — see *"One-time:
-   populate vLLM's modelinfo cache"* in the Aurora README.
+   For the LLM examples (06/07/08) `vllm_start` handles the one Aurora quirk for you —
+   it primes vLLM's modelinfo cache in-process to dodge the XPU inspection SIGSEGV — see
+   *"The XPU model-inspection SIGSEGV"* in the Aurora README.
 
 2. **Submit an example** (`submit.pbs` already has `-A ATPESC2026`):
 
