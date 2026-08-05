@@ -6,7 +6,35 @@ shared `env.sh` here (ALCF `frameworks` module, the single `flowcept-academy` co
 env, an **offline** LLM that reads ALCF's pre-staged weights, and Flowcept's offline
 settings).
 
-## One-time setup (on a login node)
+## Students: use the shared env (don't build anything)
+
+If your instructor (or a teammate) already built the env in **shared project space**,
+you do **not** run `install.sh` and you download nothing. You need exactly two things:
+
+1. **Your own clone of this repo** — exercises write `runs/<id>_<date-time>/` next to
+   the script you run, so you need a writable copy. (The shared *env* is read-only and
+   lives elsewhere; only the code needs to be yours.)
+2. **One environment variable** pointing at the shared env, then source `env.sh`:
+
+```bash
+# the shared env your instructor built (literal path -- NOT $USER; confirm it with them):
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/agueroudji/envs/flowcept-academy
+# ^ add this line to ~/.bashrc so batch jobs (and every new shell) inherit it
+
+source exercises/aurora/env.sh        # activates the shared env + offline LLM + settings
+```
+
+`env.sh` activates whatever `FLOWCEPT_ENV_PREFIX` points at (stacked on the `frameworks`
+module) and sets the offline-LLM + Flowcept settings — nothing else to configure. That's
+it: skip straight to **[Run an example](#run-an-example)** (batch) or
+**[Interactive mode](#interactive-mode-compute-node)**. For the LLM examples (06/07/08)
+`vllm_start` still primes its per-user modelinfo cache under `$HOME/.cache/vllm` the first
+time you launch a server — that just works, no setup.
+
+Everything below (building the env) is **only for whoever sets it up for the group** —
+students can ignore it.
+
+## Building the env (once, for the group — on a login node)
 
 On Aurora `conda` comes from the `frameworks` module. Following the ALCF
 ["Cloning the base Anaconda environment"](https://docs.alcf.anl.gov/polaris/data-science/python/#cloning-the-base-anaconda-environment)
@@ -70,10 +98,11 @@ for everyone. It also installs the tutorial library non-editable, so the shared 
 not point back at the builder's clone; re-run the same command to republish after
 editing `flowcept_academy/`.
 
-Everyone else then adds one line to `~/.bashrc` and never runs the installer:
+Everyone else then adds one line to `~/.bashrc` and never runs the installer — the
+**literal** path to wherever it was built (e.g. under the builder's `$USER`, not their own):
 
 ```bash
-export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
+export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/agueroudji/envs/flowcept-academy
 ```
 
 and per session just `source exercises/aurora/env.sh`. Each user still needs their own

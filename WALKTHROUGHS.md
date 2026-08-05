@@ -23,7 +23,30 @@ model on Aurora. Full operational
 detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix — is in
 [`exercises/aurora/README.md`](exercises/aurora/README.md). The short version:
 
-1. **One-time, on a login node** (login nodes have internet; compute nodes do not):
+
+
+0. **Clone this repo** — everyone needs their own writable copy (runs land in
+   `runs/<id>_<date-time>/` next to the script; the shared *env* below is read-only):
+
+   ```bash
+   git clone https://github.com/GueroudjiAmal/flowcept-academy.git
+   cd flowcept-academy
+   ```
+
+1. **Set up your env.** Two cases:
+
+   **(a) Students — a shared env is already built** (the common case for the tutorial).
+   You do **not** run the installer and download nothing. Point at the shared env and
+   source `env.sh`:
+
+   ```bash
+   export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/agueroudji/envs/flowcept-academy
+   # ^ the shared env your instructor built (literal path -- NOT $USER); add to ~/.bashrc
+   source exercises/aurora/env.sh
+   ```
+
+   **(b) Building it yourself** (one-time, on a login node — login nodes have internet,
+   compute nodes do not):
 
    ```bash
    export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
@@ -32,7 +55,7 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    source exercises/aurora/env.sh
    ```
 
-   **Nothing is downloaded.** All LLM usage reads ALCF's read-only staged hub at
+   **Nothing is downloaded** either way. All LLM usage reads ALCF's read-only staged hub at
    `/flare/datasets/model-weights` (`env.sh` points `HF_HOME` there and forces offline),
    so there is no pre-cache and no `chat('hi')` step — do not export your own `HF_HOME`.
    For the LLM examples (06/07/08) `vllm_start` handles the one Aurora quirk for you —
@@ -61,11 +84,28 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    python ../../../provenance/query.py runs/<id>_* --ask "how many tasks are there?"
    ```
 
-To work through `exercise.py` STEP by STEP interactively, grab a node
-(`qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=00:30:00 -l filesystems=home:flare`),
-`source ../env.sh`, and — for 06/07/08 — `source ../vllm_serve.sh && vllm_start`
-before running. Everything below then applies verbatim; just read `runs/<id>_*` from
-the compute-node run.
+**Interactive node** (recommended for stepping through `exercise.py` STEP by STEP, or
+iterating on `--ask` queries). Grab a node, then run things by hand — the shared-env
+setup is identical, you just source it in the interactive shell:
+
+```bash
+qsub -I -A ATPESC2026 -q debug -l select=1 -l walltime=01:00:00 -l filesystems=home:flare
+# once you land on the node:
+cd exercises/aurora/01-actor-client
+source ../env.sh                          # every fresh shell (uses FLOWCEPT_ENV_PREFIX)
+source ../vllm_serve.sh && vllm_start     # only for 06/07/08 (they need an LLM)
+python solution.py                        # writes runs/<id>_<date-time>/ HERE (all steps on)
+vllm_stop                                 # optional; then `exit` to release the node
+```
+
+> **No `runs/` after `python exercise.py`?** That's expected: as shipped, `exercise.py`
+> is **STEP 0 (baseline) and captures nothing** — the `capture_run(...)`/`captured(...)`
+> block is commented out. Run `solution.py` (all steps on) to get a run dir immediately,
+> or uncomment **STEP 1** in `exercise.py` first. The dir is created **relative to your
+> current directory** (`./runs/…`), so run from inside the example folder. (Batch jobs
+> never hit this — `submit.pbs` runs `solution.py` and pre-sets `FLOWCEPT_RUN_DIR`.)
+
+Everything below then applies verbatim; just read `runs/<id>_*` from the compute-node run.
 
 
 ## 01-actor-client  —  agent lifecycle + actions

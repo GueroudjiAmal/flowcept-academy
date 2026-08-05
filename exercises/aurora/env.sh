@@ -56,7 +56,7 @@ conda activate --stack "$ENV_PREFIX" 2>/dev/null || true
 if [[ ! -d "$ENV_PREFIX/conda-meta" ]]; then
     echo "!! no conda env at $ENV_PREFIX"
     echo "!! If your project has a SHARED env, just point at it (and add this to ~/.bashrc):"
-    echo "!!     export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy"
+    echo "!!     export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/agueroudji/envs/flowcept-academy"
     echo "!! Otherwise build your own:  bash setup/install.sh aurora"
 fi
 

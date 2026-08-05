@@ -30,12 +30,17 @@ export VLLM_MODEL="${VLLM_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
 export VLLM_TOOL_PARSER="${VLLM_TOOL_PARSER:-llama3_json}"
 export VLLM_PORT="${VLLM_PORT:-8000}"
 export VLLM_TP="${VLLM_TP:-1}"              # tiles; 1 is enough under ~20B
-# Llama-3.1-8B natively supports 131072 tokens; 8192 was too tight -- exercise 08's
-# group chat accumulates the whole discussion, and the `supervize` loop overflowed a
-# 8192-token context (8195 input tokens -> HTTP 400 "maximum context length is 8192").
-# 32768 gives the multi-agent transcript ample room; the extra KV cache (~a few GB on
-# one tile) is well within a 64GB device. Raise further (up to 131072) for longer chats.
-export VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-32768}"
+# Serve the model's FULL native context so exercise 08 can never overflow it. Llama-3.1-8B
+# supports 131072 tokens natively -- that is the real ceiling (going beyond needs RoPE
+# scaling, which degrades quality), so 131072 is effectively "unlimited" for this tutorial.
+# Why this matters: 08's group chat accumulates the WHOLE discussion and the `supervize`
+# loop re-sends it every round, so its context grows with the conversation and kept grazing
+# smaller ceilings -- 8192 overflowed (8195 tokens), then 32768 overflowed by a hair (32771).
+# At 131072 there is 4x the headroom of that failure. KV cache scales with this (Llama-3.1-8B
+# ~128 KB/token -> ~16 GB for a full 131072-token sequence), which still fits a 64GB tile
+# alongside the ~16 GB of weights. vLLM reserves KV blocks for one max-length sequence at
+# startup; if a memory-tight node ever fails to launch, drop this to 65536.
+export VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-131072}"
 export VLLM_STARTUP_TIMEOUT="${VLLM_STARTUP_TIMEOUT:-900}"   # seconds
 
 # --- Weights: ALCF's pre-staged hub, read-only, no download ------------------
