@@ -3,7 +3,8 @@
 The same eight examples as [`../local`](../local/README.md), set up to run on
 **Aurora**. Each folder adds a `submit.pbs`; all of them (including 07) source the
 shared `env.sh` here (ALCF `frameworks` module, the single `flowcept-academy` conda
-env, an **offline** local CPU LLM, and Flowcept's offline settings).
+env, an **offline** LLM that reads ALCF's pre-staged weights, and Flowcept's offline
+settings).
 
 ## One-time setup (on a login node)
 
@@ -20,27 +21,26 @@ a home quota (`myquota`). ALCF warns the clone is slow — it is a one-time cost
 
 ```bash
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache
-# ^ add both to ~/.bashrc so batch jobs inherit them
+# ^ add to ~/.bashrc so batch jobs inherit it
 
 bash setup/install.sh aurora          # clones the frameworks base + adds the delta
 source exercises/aurora/env.sh        # modules + conda env + offline LLM + settings
 ```
 
-`install.sh` **pre-caches the CPU fallback LLM for you** on the login node (with
-internet), so you do **not** run any `chat('hi')` step by hand. `env.sh` then sets
-`HF_HUB_OFFLINE=1` (and defaults `HF_HOME` to `$REPO/hf_cache` if you did not export
-it), so the compute nodes read that cached model **offline** — no Argo, no network. If
-`FLOWCEPT_ENV_PREFIX` is unset it falls back to `$REPO/envs/flowcept-academy` and warns
-if nothing is built there.
+**No model is downloaded.** All LLM usage reads ALCF's read-only staged hub at
+`/flare/datasets/model-weights` (the same weights vLLM serves). `env.sh` points
+`HF_HOME` there and sets `HF_HUB_OFFLINE=1`/`TRANSFORMERS_OFFLINE=1`, so the compute
+nodes load `meta-llama/Llama-3.1-8B-Instruct` **offline** — no Argo, no network, no
+pre-cache step. Do **not** export your own `HF_HOME`; that would point the stack away
+from the staged hub and offline loads would fail. If `FLOWCEPT_ENV_PREFIX` is unset it
+falls back to `$REPO/envs/flowcept-academy` and warns if nothing is built there.
 
-> **Re-caching by hand.** If you ever need to, do it from a login node with the online
-> flags *explicitly overriding* `env.sh` (sourcing `env.sh` first would set
-> `HF_HUB_OFFLINE=1` and the download would fail):
-> ```bash
-> HF_HOME=$HF_HOME HF_HUB_OFFLINE=0 FLOWCEPT_TUTORIAL_LLM=local \
->   python -c "from flowcept_academy.util import chat; chat('hi')"
-> ```
+> **What "local" runs.** The tutorial's `local` backend loads `FLOWCEPT_TUTORIAL_MODEL`
+> (default `meta-llama/Llama-3.1-8B-Instruct`) from the staged hub via `transformers` on
+> the **CPU** — an 8B is slow there, so this path is only query.py's `ask()` and the
+> `FLOWCEPT_USE_VLLM=0` opt-out. Examples 06/07/08 serve the same weights *fast* on the
+> GPUs with vLLM (see below). To use a different staged model, set
+> `FLOWCEPT_TUTORIAL_MODEL` to one that actually exists under `$HF_HOME/hub`.
 
 > **Exercise 07 chemistry, if conda-forge can't solve against the clone.** If
 > `install.sh` warns that `xtb-python`/`rdkit`/`ase` didn't solve, build a tiny
@@ -58,29 +58,26 @@ Build it **once**, into group-writable project space rather than a `$USER` direc
 
 ```bash
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
-bash setup/install.sh aurora --shared     # clones the base, adds the delta, pre-caches the CPU LLM
+bash setup/install.sh aurora --shared     # clones the base, adds the delta
 source exercises/aurora/env.sh
 ```
 
-`install.sh --shared` pre-caches the CPU LLM into the shared `HF_HOME` for the whole
-group. It sets `umask 002` and setgid so everything lands in the project group, then
-makes the env **group-readable** (`g+rX`) and the HF cache **group-writable**
-(`g+rwX` — `huggingface_hub` writes lock files even on a cache hit). It also installs
-the tutorial library non-editable, so the shared env does not point back at the
-builder's clone; re-run the same command to republish after editing
-`flowcept_academy/`.
+`install.sh --shared` sets `umask 002` and setgid so everything lands in the project
+group, then makes the env **group-readable** (`g+rX`). There is no shared model cache to
+manage — all LLM usage reads ALCF's staged hub, which is already shared and read-only
+for everyone. It also installs the tutorial library non-editable, so the shared env does
+not point back at the builder's clone; re-run the same command to republish after
+editing `flowcept_academy/`.
 
-Everyone else then adds two lines to `~/.bashrc` and never runs the installer:
+Everyone else then adds one line to `~/.bashrc` and never runs the installer:
 
 ```bash
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
 ```
 
 and per session just `source exercises/aurora/env.sh`. Each user still needs their own
 clone of this repo — exercises write `runs/` next to the script being run — but the
-multi-GB env and model cache are downloaded once for the group.
+multi-GB env is built once for the group.
 
 > At large node counts, importing Python packages from a home or Lustre-backed env
 > gets slow; ALCF recommends [Copper](https://docs.alcf.anl.gov/aurora/data-management/copper/)
@@ -113,7 +110,7 @@ Examples 05 and 07 need the `parsl` / `langgraph` extras, already installed by
 ## LLMs on Aurora: vLLM on the node's own GPUs
 
 Compute nodes reach neither Argo nor `api.openai.com`, and the CPU fallback
-(`Qwen2.5-0.5B-Instruct` through transformers) is slow and **cannot emit tool
+(`Llama-3.1-8B-Instruct` through transformers) is slow and **cannot emit tool
 calls** — which example 07 requires. So examples 06/07/08 serve a real model
 *locally*: vLLM ships in the `frameworks` module and reads weights straight from
 ALCF's staged hub at `/flare/datasets/model-weights`, so nothing is downloaded and
@@ -136,8 +133,8 @@ vllm_stop             # also runs automatically on job exit
 
 | Variable | Default | Notes |
 |---|---|---|
-| `VLLM_MODEL` | `Qwen/Qwen2.5-7B-Instruct` | Under ~20B in bf16 fits one 64 GB tile |
-| `VLLM_TOOL_PARSER` | `hermes` | **Must match the model family** — `llama3_json` for Llama-3.1 |
+| `VLLM_MODEL` | `meta-llama/Llama-3.1-8B-Instruct` | ALCF-staged; under ~20B in bf16 fits one 64 GB tile |
+| `VLLM_TOOL_PARSER` | `llama3_json` | **Must match the model family** — `hermes` for Qwen |
 | `VLLM_TP` | `1` | Tiles; raise only for larger models |
 | `VLLM_PORT` | `8000` | |
 | `FLOWCEPT_USE_VLLM` | `1` | `0` → fall back to the CPU model (06/08 only) |

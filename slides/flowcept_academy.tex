@@ -395,22 +395,22 @@ class SimulationAgent(Agent):
   (\texttt{-A ATPESC2026} already set); all share \texttt{exercises/aurora/env.sh}
   (modules + conda env + offline LLM + settings).
 \begin{lstlisting}[style=sh]
-# once, on a login node (has internet). Env lives in project space.
+# once, on a login node. Env lives in project space. No model download.
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
-bash setup/install.sh aurora     # CLONES the frameworks base + pre-caches CPU LLM
+bash setup/install.sh aurora     # CLONES the frameworks base + delta (no LLM download)
 source exercises/aurora/env.sh   # frameworks; conda activate; HF offline; settings
 
 # then just submit -- no editing needed
 cd exercises/aurora/06-llm && qsub submit.pbs   # -> runs/06-llm_<date-time>/
 \end{lstlisting}
   \small \texttt{install.sh aurora} clones the ALCF \texttt{frameworks} base env
-  (so \texttt{xtb-python} for 07 installs) and caches the CPU model while online;
-  \texttt{env.sh} sets \texttt{HF\_HUB\_OFFLINE=1}, so compute nodes need no network.
-  \textbf{06/07/08} serve a real model on the node's own GPUs via vLLM
-  (\texttt{FLOWCEPT\_USE\_VLLM=0} falls back to the CPU model for 06/08; 07 needs vLLM
-  or Argo for tool calls). Provenance stays offline --- inspect with the same terminal
-  tools, no images to shuttle around.
+  (so \texttt{xtb-python} for 07 installs); nothing is downloaded. All LLM usage reads
+  ALCF's staged hub at \texttt{/flare/datasets/model-weights} --- \texttt{env.sh} points
+  \texttt{HF\_HOME} there and sets \texttt{HF\_HUB\_OFFLINE=1}, so compute nodes need no
+  network. \textbf{06/07/08} serve \texttt{Llama-3.1-8B-Instruct} on the node's own GPUs
+  via vLLM (\texttt{FLOWCEPT\_USE\_VLLM=0} falls back to the same weights on CPU for
+  06/08; 07 needs vLLM or Argo for tool calls). Provenance stays offline --- inspect
+  with the same terminal tools, no images to shuttle around.
 \end{frame}
 
 \begin{frame}{Recap}

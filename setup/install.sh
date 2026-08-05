@@ -63,7 +63,7 @@ case "$MODE" in
         # rest (setup/requirements-aurora.txt). The module also provides the `vllm`
         # binary that vllm_serve.sh runs as a SEPARATE server for 06/07/08 (the tutorial
         # talks to it over HTTP), so this env needs only a CPU torch (inherited from the
-        # clone) for the 0.5B fallback model.
+        # clone) for the transformers CPU fallback (query.py ask() / FLOWCEPT_USE_VLLM=0).
         # NOTE: ALCF warns cloning is slow and multi-GB -- keep ENV_PREFIX in project space.
         #
         # Lmod (and conda's module hook) deref $ZSH_EVAL_CONTEXT -- a zsh-only var,
@@ -158,50 +158,30 @@ mkdir -p "$HOME/.flowcept" && cp "$REPO/setup/flowcept_settings.yaml" "$HOME/.fl
 PYRUN -c \
   "from flowcept_academy import util; print('LLM backend:', util.which_backend(), '| local model:', util.DEFAULT_CHAT_MODEL)"
 
-# --- Offline prep (Aurora): pre-cache the CPU fallback LLM NOW ---------------
-# This login node has internet; the compute nodes do NOT, and env.sh sets
-# HF_HUB_OFFLINE=1 at run time -- so the 0.5B fallback model must already be on disk
-# in HF_HOME. (We force HF_HUB_OFFLINE=0 + FLOWCEPT_TUTORIAL_LLM=local here so the
-# fetch actually happens regardless of the caller's shell.) 06/07/08 normally serve a
-# bigger model with vLLM instead, but query.py's ask() and the FLOWCEPT_USE_VLLM=0
-# fallback use this one; vLLM weights come from ALCF's staged hub -- nothing to fetch.
+# --- Aurora LLM: ALCF's pre-staged weights, nothing to download --------------
+# No model is fetched here. On Aurora all LLM usage reads ALCF's read-only staged hub
+# at /flare/datasets/model-weights (env.sh points HF_HOME there and forces offline):
+# 06/07/08 serve it fast on the GPUs via vLLM; the FLOWCEPT_USE_VLLM=0 opt-out and
+# query.py's ask() load the same weights on CPU via transformers. So there is no
+# login-node pre-cache step and no per-user HF cache to manage.
 if [[ "$MODE" == aurora ]]; then
-    export HF_HOME="${HF_HOME:-$REPO/hf_cache}"
-    mkdir -p "$HF_HOME"
-    echo ">> pre-caching the CPU fallback LLM into $HF_HOME (login node, online)..."
-    if FLOWCEPT_TUTORIAL_LLM=local HF_HUB_OFFLINE=0 PYRUN -c \
-        "from flowcept_academy.util import chat; chat('hi'); print('CPU fallback LLM cached')"; then
-        echo ">> cached -- compute nodes can load it offline (HF_HUB_OFFLINE=1)."
-    else
-        echo ">> WARN: could not pre-cache the CPU LLM (no internet here, or the download failed)."
-        echo ">>       06/08's CPU fallback and query.py's ask() will fail offline until it is cached."
-        echo ">>       Retry from a login node (note the explicit online flags):"
-        echo "           HF_HOME=$HF_HOME HF_HUB_OFFLINE=0 FLOWCEPT_TUTORIAL_LLM=local \\"
-        echo "             python -c \"from flowcept_academy.util import chat; chat('hi')\""
-    fi
+    echo ">> Aurora LLM: reads ALCF's staged hub /flare/datasets/model-weights (no download)."
 fi
 
 if (( SHARED )); then
     # Group-READABLE (g+rX), deliberately not group-writable: teammates run the env,
-    # the owner rebuilds it. Also share the HF weight cache if it is outside the env.
+    # the owner rebuilds it. The HF weight cache needs no perms -- it is ALCF's staged
+    # hub, shared and read-only for everyone already.
     echo ">> making the env group-readable (this walks a few hundred thousand files)..."
     chmod -R g+rX "$ENV_PREFIX"
-    # The HF cache, unlike the env, is group-WRITABLE: huggingface_hub writes lock
-    # files under hub/.locks even on a pure cache hit, so a read-only cache can fail
-    # for everyone but the owner. It is regenerable, so this is the cheap trade.
-    if [[ -n "${HF_HOME:-}" && -d "$HF_HOME" ]]; then
-        chmod -R g+rwX "$HF_HOME"
-        find "$HF_HOME" -type d -exec chmod g+s {} + 2>/dev/null || true
-        echo ">> shared HF cache (group-writable): $HF_HOME"
-    fi
 fi
 
 echo ">> Done. Activate:  $ACTIVATE"
 if (( SHARED )); then
     echo ">>"
-    echo ">> Shared env ready. Tell everyone on the project to put these in their ~/.bashrc:"
+    echo ">> Shared env ready. Tell everyone on the project to put this in their ~/.bashrc:"
     echo "     export FLOWCEPT_ENV_PREFIX=$ENV_PREFIX"
-    [[ -n "${HF_HOME:-}" ]] && echo "     export HF_HOME=$HF_HOME"
+    echo ">> (No HF_HOME to share -- env.sh points it at ALCF's staged hub for everyone.)"
     echo ">> They do NOT re-run this script. Per session they only need:"
     echo "     source exercises/aurora/env.sh"
     echo ">> Each user still needs their own clone of this repo (the exercises write"
@@ -210,7 +190,8 @@ if (( SHARED )); then
 fi
 if [[ "$MODE" == aurora ]]; then
     echo ">> On Aurora, just:  source exercises/aurora/env.sh   (modules + env + offline LLM + settings)"
-    echo ">> The CPU fallback LLM was pre-cached above; env.sh then runs it fully offline."
+    echo ">> All LLM usage reads ALCF's staged hub at /flare/datasets/model-weights, fully"
+    echo ">> offline -- nothing was downloaded, and nothing needs to be."
     echo ">>"
     echo ">> Examples 06/07/08 instead serve a real model with vLLM on the compute node's"
     echo ">> GPUs (see exercises/aurora/vllm_serve.sh). Weights come from ALCF's staged hub"

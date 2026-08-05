@@ -14,8 +14,9 @@ cd "$PBS_O_WORKDIR"
 source ../env.sh                 # modules + conda env + offline LLM + Flowcept settings
 
 # Serve a real model on this node's GPUs (no Argo / no api.openai.com needed).
-# Set FLOWCEPT_USE_VLLM=0 to fall back to the CPU 0.5B model instead -- much faster
-# to start, much worse answers. Walltime above allows for vLLM startup (~2-5 min).
+# Set FLOWCEPT_USE_VLLM=0 to fall back to the same staged weights on the CPU via
+# transformers instead -- no GPU startup, but much slower and no tool calls.
+# Walltime above allows for vLLM startup (~2-5 min).
 if [[ "${FLOWCEPT_USE_VLLM:-1}" == 1 ]]; then
     source ../vllm_serve.sh
     vllm_start

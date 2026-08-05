@@ -26,15 +26,16 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
 
    ```bash
    export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
-   export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache   # add both to ~/.bashrc
-   bash setup/install.sh aurora     # clones the frameworks base + delta; pre-caches the CPU LLM
+   # ^ add to ~/.bashrc so batch jobs inherit it
+   bash setup/install.sh aurora     # clones the frameworks base + delta
    source exercises/aurora/env.sh
    ```
 
-   `install.sh` pre-caches the offline CPU fallback model for you (on the login node,
-   which has internet), so there is no manual `chat('hi')` step. For the LLM examples
-   (06/07/08) also populate vLLM's modelinfo cache once — see *"One-time: populate
-   vLLM's modelinfo cache"* in the Aurora README.
+   **Nothing is downloaded.** All LLM usage reads ALCF's read-only staged hub at
+   `/flare/datasets/model-weights` (`env.sh` points `HF_HOME` there and forces offline),
+   so there is no pre-cache and no `chat('hi')` step — do not export your own `HF_HOME`.
+   For the LLM examples (06/07/08) populate vLLM's modelinfo cache once — see *"One-time:
+   populate vLLM's modelinfo cache"* in the Aurora README.
 
 2. **Submit an example** (`submit.pbs` already has `-A ATPESC2026`):
 
@@ -46,11 +47,11 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    Backend need per example:
    - **01–05** — no LLM (03/05 just offload compute); run on the CPU env as-is.
    - **06, 08** — `submit.pbs` starts vLLM on the node's GPUs by default; set
-     `FLOWCEPT_USE_VLLM=0` to fall back to the CPU 0.5B model (faster to start, weaker
-     answers, no tool calls).
+     `FLOWCEPT_USE_VLLM=0` to fall back to the staged model on CPU via transformers
+     (much slower, no tool calls).
    - **07** — **requires** tool calling: keep the default vLLM, or
      `export ARGO_USER=... FLOWCEPT_USE_VLLM=0` if the node reaches Argo. On the plain
-     CPU model its `tool_calling` node would retry forever.
+     CPU fallback its `tool_calling` node retries a few times, then fails.
 
 3. **Query the result** — same tool as local, from the example folder:
 

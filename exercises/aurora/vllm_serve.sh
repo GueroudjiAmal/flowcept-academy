@@ -5,9 +5,9 @@
 #   python solution.py
 #   vllm_stop                  # (also runs automatically on job exit)
 #
-# Why: Aurora compute nodes reach neither Argo nor api.openai.com, and the default
-# offline fallback (Qwen2.5-0.5B on the CPU) cannot emit tool calls -- which example
-# 07 requires. vLLM ships in the ALCF `frameworks` module and serves models straight
+# Why: Aurora compute nodes reach neither Argo nor api.openai.com, and the offline
+# CPU fallback (the staged model via transformers) cannot emit tool calls -- which
+# example 07 requires. vLLM ships in the ALCF `frameworks` module and serves models straight
 # off /flare/datasets/model-weights, so we get a real tool-capable model with no
 # external network at all. It talks the OpenAI API, so flowcept_academy.util routes
 # to it through the same ChatOpenAI path Argo/OpenAI use -- agent code unchanged.
@@ -16,16 +16,18 @@
 # LLM, so they stay on the CPU model; this is for 06/07/08.
 
 # --- What to serve ----------------------------------------------------------
-# A PVC tile is 64 GB, so anything under ~20B in bfloat16 fits with TP=1.
-# The tool-call parser is model-family specific and MUST match, or the server will
-# happily generate text that never parses as a tool call (07 would retry forever):
+# Default to a model ALCF pre-stages under /flare/datasets/model-weights (see the
+# ALCF Aurora vLLM docs) so nothing is ever downloaded. A PVC tile is 64 GB, so
+# anything under ~20B in bfloat16 fits with TP=1. The tool-call parser is
+# model-family specific and MUST match, or the server will happily generate text
+# that never parses as a tool call (07 would retry a few times, then fail):
 #
-#   Qwen/Qwen2.5-7B-Instruct        --tool-call-parser hermes
-#   Qwen/Qwen2.5-14B-Instruct       --tool-call-parser hermes
-#   meta-llama/Llama-3.1-8B-Instruct    --tool-call-parser llama3_json
+#   meta-llama/Llama-3.1-8B-Instruct    --tool-call-parser llama3_json   (default; ALCF-staged)
+#   meta-llama/Llama-3.3-70B-Instruct   --tool-call-parser llama3_json   (needs more tiles, raise VLLM_TP)
+#   Qwen/Qwen2.5-7B-Instruct            --tool-call-parser hermes        (only if staged)
 #
-export VLLM_MODEL="${VLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct}"
-export VLLM_TOOL_PARSER="${VLLM_TOOL_PARSER:-hermes}"
+export VLLM_MODEL="${VLLM_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
+export VLLM_TOOL_PARSER="${VLLM_TOOL_PARSER:-llama3_json}"
 export VLLM_PORT="${VLLM_PORT:-8000}"
 export VLLM_TP="${VLLM_TP:-1}"              # tiles; 1 is enough under ~20B
 export VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-8192}"

@@ -34,15 +34,15 @@ in conda so `xtb-python` installs — there is no PyPI `xtb` wheel for the base'
 # point the env at project space -- a clone of the base is many GB and will blow
 # through your home quota (check with `myquota`). ALCF warns the clone is slow.
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/$USER/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC2026/prov/$USER/hf_cache     # model cache, same reason
 
-bash setup/install.sh aurora    # also pre-caches the offline CPU LLM (login node, online)
+bash setup/install.sh aurora    # no model download -- LLM usage reads ALCF's staged hub
 ```
 
-Put both exports in your `~/.bashrc` so batch jobs see them —
+Put that export in your `~/.bashrc` so batch jobs see it —
 [`exercises/aurora/env.sh`](../exercises/aurora/env.sh) reads `FLOWCEPT_ENV_PREFIX`
 to activate the env, and falls back to `$REPO/envs/flowcept-academy` if it is unset.
-Then, per session:
+Do **not** set `HF_HOME`; `env.sh` points it at ALCF's read-only staged model hub at
+`/flare/datasets/model-weights` and forces offline loads. Then, per session:
 
 ```bash
 source exercises/aurora/env.sh      # modules + conda activate + offline LLM + settings
@@ -55,18 +55,17 @@ Add `--shared` and point the prefix at group-writable project space instead of a
 
 ```bash
 export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/envs/flowcept-academy
-export HF_HOME=/lus/flare/projects/ATPESC2026/prov/hf_cache
 bash setup/install.sh aurora --shared
 ```
 
-The env comes out group-readable (not writable — the owner rebuilds it), the HF cache
-group-writable, and the tutorial library is installed non-editable so it does not
-depend on the builder's clone. Everyone else exports the same two variables and skips
+The env comes out group-readable (not writable — the owner rebuilds it) and the
+tutorial library is installed non-editable so it does not depend on the builder's
+clone. There is no shared model cache to manage — all LLM usage reads ALCF's staged
+hub, already shared and read-only. Everyone else exports the same variable and skips
 the installer entirely.
 
 See [`exercises/aurora/README.md`](../exercises/aurora/README.md) for the shared-env
-details, the offline LLM cache (pre-cached automatically by `install.sh`), and
-submitting jobs.
+details, the offline staged-hub LLM, and submitting jobs.
 
 `flowcept_settings.yaml` is the **offline** profile: provenance is written to a
 JSONL buffer — no Redis/Mongo needed. Each run writes its `flowcept_buffer.jsonl`,
