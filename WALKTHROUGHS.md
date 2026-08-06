@@ -41,7 +41,7 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
 
    ```bash
    export FLOWCEPT_ENV_PREFIX=/lus/flare/projects/ATPESC2026/prov/agueroudji/envs/flowcept-academy
-   # ^ the shared env your instructor built (literal path -- NOT $USER); add to ~/.bashrc
+   # the shared env your instructor built (literal path -- NOT $USER); add to ~/.bashrc
    source exercises/aurora/env.sh
    ```
 
@@ -54,13 +54,6 @@ detail — shared project env, tunables, the one-time vLLM modelinfo-cache fix �
    bash setup/install.sh aurora     # clones the frameworks base + delta
    source exercises/aurora/env.sh
    ```
-
-   **Nothing is downloaded** either way. All LLM usage reads ALCF's read-only staged hub at
-   `/flare/datasets/model-weights` (`env.sh` points `HF_HOME` there and forces offline),
-   so there is no pre-cache and no `chat('hi')` step — do not export your own `HF_HOME`.
-   For the LLM examples (06/07/08) `vllm_start` handles the one Aurora quirk for you —
-   it primes vLLM's modelinfo cache in-process to dodge the XPU inspection SIGSEGV — see
-   *"The XPU model-inspection SIGSEGV"* in the Aurora README.
 
 2. **Submit an example** (`submit.pbs` already has `-A ATPESC2026`):
 

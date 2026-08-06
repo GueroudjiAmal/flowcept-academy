@@ -9,11 +9,6 @@ The examples are laid out as **step-by-step exercises**: each ships as a stock
 Academy program that runs but records nothing, and you turn provenance on one
 **STEP** at a time by uncommenting a block and re-running.
 
-**Terminal-only**: every analysis is text (summaries, lineage trees, ASCII
-dashboards, a markdown provenance card) — no images, no GUI — so it runs unchanged
-over SSH on an **Aurora** compute node. CPU-friendly; LLM via **Argo → vLLM →
-OpenAI → local CPU model** (no mock).
-
 ---
 
 ## Setup
@@ -26,16 +21,6 @@ no per-exercise env.
 cd flowcept-academy
 bash setup/install.sh                 # builds the `flowcept-academy` conda env + deps + settings
 conda activate flowcept-academy
-```
-
-All 01–08 run in this single env. **Example 07** additionally needs a tool-capable
-LLM (its `tool_calling` node retries until it gets a parseable tool call); the
-default local 0.5B model doesn't emit tool calls, so run 07 with Argo, vLLM, or OpenAI
-(or a tool-capable local model — see its README):
-
-```bash
-cd exercises/local/07-mol-design
-ARGO_USER=<your_anl_username> python solution.py
 ```
 
 ## The exercises
@@ -169,35 +154,7 @@ can't parse shows up as a failed `compute_ionization_energy`):
     academy_action/<action> [ERROR] stderr: <the exception message>
 ```
 
----
+## License
 
-## Layout
-
-```
-flowcept-academy/
-├── exercises/
-│   ├── local/<id>/     exercise.py (steps) · solution.py · README.md
-│   └── aurora/<id>/    + submit.pbs        · env.sh (shared)
-├── flowcept_academy/   # the reusable library
-│   ├── capture.py      # captured() + langgraph_capture(): turn provenance on
-│   ├── provenance.py   # load_buffer/load_records · print_summary · print_lineage · print_tailored · provenance_card · text_dashboard
-│   └── util.py         # run() helper + make_chat_model()/chat() (Argo -> vLLM -> OpenAI -> local, no mock)
-├── provenance/
-│   ├── analyze.py      # inspect any buffer / dir (+ --all), terminal-only
-│   ├── query.py        # interactive shell + ask("...") NL queries
-│   └── sample/         # a ready-to-inspect captured run (real example 07)
-├── slides/             # Beamer teaching deck
-└── setup/              # offline settings + install.sh
-```
-
-## Slides & Aurora
-
-- Slides: `cd slides && make` → `flowcept_academy.pdf`.
-- Aurora: see [`exercises/aurora/README.md`](exercises/aurora/README.md) — per-example
-  `submit.pbs`, one shared `env.sh`, provenance offline; the LLM examples (06/07/08)
-  serve a tool-capable **vLLM** model on the node's own GPUs (01–05 need no LLM). A
-  step-by-step Aurora run is in
-  [`WALKTHROUGHS.md`](WALKTHROUGHS.md#running-these-on-aurora).
-
-Built for ATPESC. Flowcept (ORNL); Academy (Globus Labs / ANL). Example 07 runs
-real GFN2-xTB chemistry (rdkit + ASE + xtb).
+Released under the [MIT License](LICENSE). The upstream Academy examples remain
+under their own license ([github.com/academy-agents/academy](https://github.com/academy-agents/academy)).

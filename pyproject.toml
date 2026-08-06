@@ -10,6 +10,7 @@ description = "1-hour tutorial: capturing the provenance of Academy multi-agent 
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+classifiers = ["License :: OSI Approved :: MIT License"]
 
 dependencies = [
     "academy-py>=0.4.0",
@@ -44,6 +45,9 @@ all = ["flowcept-academy[llm,parsl]"]
 # rdkit + xtb-python for REAL GFN2-xTB chemistry and those are conda-forge only.
 # These pip extras still work if you prefer a manual install, but 07 additionally
 # requires `conda install -c conda-forge rdkit xtb-python ase`.
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 include = ["flowcept_academy*"]
